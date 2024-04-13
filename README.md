@@ -207,7 +207,7 @@ We have now to setup web interface. Take a photo of turntable, in top view. Conv
 
 Then, duplicate image and name it "plaque.png". Select the center part (the rotating one), and remove external part. A good idea is to use GIMP, and make a rounded rectangle with 100% radius, then inverting selection, and cutting selection.
 
-Copy both files in data folder, then download data folder into ESP.
+Copy both files in data folder, then download data folder into ESP. Take care of image size. Too large, you won't be able to load them into flash (limited around 1 MB).
 
 When used, first image will be displayed as is, and second one will be overwritten in center, rotated the same angle as turntable.
 
@@ -215,7 +215,7 @@ Reste à paramétrer l'interface Web. Prendre une photo du pont, vue de dessus. 
 
 Dupliquer ensuite cette image en la nommant "plaque.png". Sélectionner le centre de l'image (la partie tournante), et supprimer la partie externe. Une façon de faire ça est d'utiliser GIMP, de faire une sélection rectangulaire arrondie, avec un rayon de 100%, d'inverser la sélection et de la supprimer.
 
-Copier les 2 fichier dans le répertoire data, et le charger dans la flash de l'ESP.
+Copier les 2 fichier dans le répertoire data, et le charger dans la flash de l'ESP. Attention à la taille des images : trop importantes, elles ne pourront pas être chargées en flash (limitée autour d'un MO).
 
 ## Available URL/URL disponibles
 
@@ -226,3 +226,9 @@ Copier les 2 fichier dans le répertoire data, et le charger dans la flash de l'
   - /edit : manage and edit flie system/gère et édite le système de fichier
   - /settings : returns settings in JSON format/Retourne la configuration au format JSON
   - /debug : display internal variables to debug/Affiche les variables internes pour déverminer
+  
+## Backups/Sauvegardes
+
+You may use /settings to get a copy of settings.json file, which contains parameters. Make a copy of it to be able to restore them, when copied back into data folder, and reloaded in flash. You can also use /edit to download/upload this file.
+
+Vous pouvez utiliser /settings pour obtenir une copie du fichier settings.json, qui contient les paramètres. Faites une copie de ce fichier pour être capable de le recharger en le copiant dans le répertoire data, et en rechargeant la flash. Vous pouvez aussi utiliser /edit pour récupérer ou recharger ce fichier.
