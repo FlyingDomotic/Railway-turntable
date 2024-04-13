@@ -1,0 +1,29 @@
+body {
+    color: #000000;
+}
+
+hr {
+    background-color: #eee;
+    border: 0 none;
+    color: #eee;
+    height: 1px;
+}
+
+table {
+    margin: 5px;
+}
+
+th {
+    background-color: #CCCCCC;
+}
+
+th,
+td {
+  border: 1px solid ;
+  padding: 5px 3px;
+  text-align: center;
+}
+
+canvas {
+    border: 1px solid black;
+}

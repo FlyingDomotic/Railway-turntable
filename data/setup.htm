@@ -1,0 +1,124 @@
+<!-- Page to setup railway turntable server -->
+<!DOCTYPE html>
+<html>
+	<head>
+	  <meta charset="utf-8">
+	  <title>Configuration du pont tournant</title>
+	  <link rel="stylesheet" href="style.css" type="text/css" />
+	  <script src="translate.js"></script>
+	  <script src="logic.js"></script>
+	</head>
+	<body onload="initAll(true);">
+		<!-- Turntable image here -->
+		<div>
+			<canvas id="canvas" width="600" height="600" onmouseup="sendLocationPct(event);"></canvas>
+		</div>
+		<!-- Language selector (default to user's first prefered language matching those available (en,fr), (en) else) -->
+		<div>
+			<label data-i18n-key="languageSelector">Language </label>&nbsp;
+			<select data-i18n-switcher class="locale-switcher">
+				<option value="en">English</option>
+				<option value="fr">Français</option>
+			</select>
+		</div>
+		<div>
+			<hr />
+			<!-- Display current angle -->
+			<label data-i18n-key="angle">Rotation angle :</label>&nbsp;<label id="angle"></label>&deg;&nbsp;&plusmn;<label id="angleError">??</label>&deg;<br>
+			<hr />
+			<!-- Display 2 lines of buttons, + and -, 1/5/10/50/100/500 -->
+			<input type="button" style="width:75px" value="+1" onclick="move(1);"/>
+			<input type="button" style="width:75px" value="+5" onclick="move(5);"/>
+			<input type="button" style="width:75px" value="+10" onclick="move(10);"/>
+			<input type="button" style="width:75px" value="+50" onclick="move(50);"/>
+			<input type="button" style="width:75px" value="+100" onclick="move(100);"/>
+			<input type="button" style="width:75px" value="+500" onclick="move(500);"/>
+			<br>
+			<input type="button" style="width:75px" value="-1" onclick="move(-1);"/>
+			<input type="button" style="width:75px" value="-5" onclick="move(-5);"/>
+			<input type="button" style="width:75px" value="-10" onclick="move(-10);"/>
+			<input type="button" style="width:75px" value="-50" onclick="move(-50);"/>
+			<input type="button" style="width:75px" value="-100" onclick="move(-100);"/>
+			<input type="button" style="width:75px" value="-500" onclick="move(-500);"/>
+			<hr />
+			<!-- Display track #1 image angle and a button to set it at current position -->
+			<label data-i18n-key="imageOffsetAngle">Track #1 image angle:</label>&nbsp;<label id="imageOffsetAngle"></label>&deg;<br>
+			<input type="button" id="imageReference" data-i18n-key="imageReference" value="Set image on track #1" style="width:470px" onclick="setImageReference();">
+			<hr />
+			<!-- Display and set track count -->
+			<label data-i18n-key="trackCount">Track count:</label>&nbsp;<input type="number" id="trackCount" min="2" max="36" style="width:60px" onchange="changed(this);"><br>
+			<hr />
+			<table>
+				<!-- Display a table with 3 columns: track number (1 to track count, button with track angle and button (<--) to set track to current angle) -->
+				<tr><th id="thTrack" data-i18n-key="thTrack">Track</th><th id="thAngle" data-i18n-key="thAngle">Angle</th><th id="thDefinition" data-i18n-key="thDefinition">D&eacute;finition</th></tr>
+				<tr id="l1"><td>1</td><td><input type="button" style="width:75px" value="xxx.x" id="a1" onclick="moveToTrack(1);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(1);"/></td></tr>
+				<tr id="l2"><td>2</td><td><input type="button" style="width:75px" value="xxx.x" id="a2" onclick="moveToTrack(2);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(2);"/></td></tr>
+				<tr id="l3"><td>3</td><td><input type="button" style="width:75px" value="xxx.x" id="a3" onclick="moveToTrack(3);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(3);"/></td></tr>
+				<tr id="l4"><td>4</td><td><input type="button" style="width:75px" value="xxx.x" id="a4" onclick="moveToTrack(4);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(4);"/></td></tr>
+				<tr id="l5"><td>5</td><td><input type="button" style="width:75px" value="xxx.x" id="a5" onclick="moveToTrack(5);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(5);"/></td></tr>
+				<tr id="l6"><td>6</td><td><input type="button" style="width:75px" value="xxx.x" id="a6" onclick="moveToTrack(6);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(6);"/></td></tr>
+				<tr id="l7"><td>7</td><td><input type="button" style="width:75px" value="xxx.x" id="a7" onclick="moveToTrack(7);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(7);"/></td></tr>
+				<tr id="l8"><td>8</td><td><input type="button" style="width:75px" value="xxx.x" id="a8" onclick="moveToTrack(8);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(8);"/></td></tr>
+				<tr id="l9"><td>9</td><td><input type="button" style="width:75px" value="xxx.x" id="a9" onclick="moveToTrack(9);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(9);"/></td></tr>
+				<tr id="l10"><td>10</td><td><input type="button" style="width:75px" value="xxx.x" id="a10" onclick="moveToTrack(10);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(10);"/></td></tr>
+				<tr id="l11"><td>11</td><td><input type="button" style="width:75px" value="xxx.x" id="a11" onclick="moveToTrack(11);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(11);"/></td></tr>
+				<tr id="l12"><td>12</td><td><input type="button" style="width:75px" value="xxx.x" id="a12" onclick="moveToTrack(12);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(12);"/></td></tr>
+				<tr id="l13"><td>13</td><td><input type="button" style="width:75px" value="xxx.x" id="a13" onclick="moveToTrack(13);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(13);"/></td></tr>
+				<tr id="l14"><td>14</td><td><input type="button" style="width:75px" value="xxx.x" id="a14" onclick="moveToTrack(14);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(14);"/></td></tr>
+				<tr id="l15"><td>15</td><td><input type="button" style="width:75px" value="xxx.x" id="a15" onclick="moveToTrack(15);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(15);"/></td></tr>
+				<tr id="l16"><td>16</td><td><input type="button" style="width:75px" value="xxx.x" id="a16" onclick="moveToTrack(16);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(16);"/></td></tr>
+				<tr id="l17"><td>17</td><td><input type="button" style="width:75px" value="xxx.x" id="a17" onclick="moveToTrack(17);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(17);"/></td></tr>
+				<tr id="l18"><td>18</td><td><input type="button" style="width:75px" value="xxx.x" id="a18" onclick="moveToTrack(18);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(18);"/></td></tr>
+				<tr id="l19"><td>19</td><td><input type="button" style="width:75px" value="xxx.x" id="a19" onclick="moveToTrack(19);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(19);"/></td></tr>
+				<tr id="l20"><td>20</td><td><input type="button" style="width:75px" value="xxx.x" id="a20" onclick="moveToTrack(20);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(20);"/></td></tr>
+				<tr id="l21"><td>21</td><td><input type="button" style="width:75px" value="xxx.x" id="a21" onclick="moveToTrack(21);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(21);"/></td></tr>
+				<tr id="l22"><td>22</td><td><input type="button" style="width:75px" value="xxx.x" id="a22" onclick="moveToTrack(22);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(22);"/></td></tr>
+				<tr id="l23"><td>23</td><td><input type="button" style="width:75px" value="xxx.x" id="a23" onclick="moveToTrack(23);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(23);"/></td></tr>
+				<tr id="l24"><td>24</td><td><input type="button" style="width:75px" value="xxx.x" id="a24" onclick="moveToTrack(24);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(24);"/></td></tr>
+				<tr id="l25"><td>25</td><td><input type="button" style="width:75px" value="xxx.x" id="a25" onclick="moveToTrack(25);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(25);"/></td></tr>
+				<tr id="l26"><td>26</td><td><input type="button" style="width:75px" value="xxx.x" id="a26" onclick="moveToTrack(26);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(26);"/></td></tr>
+				<tr id="l27"><td>27</td><td><input type="button" style="width:75px" value="xxx.x" id="a27" onclick="moveToTrack(27);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(27);"/></td></tr>
+				<tr id="l28"><td>28</td><td><input type="button" style="width:75px" value="xxx.x" id="a28" onclick="moveToTrack(28);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(28);"/></td></tr>
+				<tr id="l29"><td>29</td><td><input type="button" style="width:75px" value="xxx.x" id="a29" onclick="moveToTrack(29);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(29);"/></td></tr>
+				<tr id="l30"><td>30</td><td><input type="button" style="width:75px" value="xxx.x" id="a30" onclick="moveToTrack(30);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(30);"/></td></tr>
+				<tr id="l31"><td>31</td><td><input type="button" style="width:75px" value="xxx.x" id="a31" onclick="moveToTrack(31);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(31);"/></td></tr>
+				<tr id="l32"><td>32</td><td><input type="button" style="width:75px" value="xxx.x" id="a32" onclick="moveToTrack(32);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(32);"/></td></tr>
+				<tr id="l33"><td>33</td><td><input type="button" style="width:75px" value="xxx.x" id="a33" onclick="moveToTrack(33);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(33);"/></td></tr>
+				<tr id="l34"><td>34</td><td><input type="button" style="width:75px" value="xxx.x" id="a34" onclick="moveToTrack(34);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(34);"/></td></tr>
+				<tr id="l35"><td>35</td><td><input type="button" style="width:75px" value="xxx.x" id="a35" onclick="moveToTrack(35);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(35);"/></td></tr>
+				<tr id="l36"><td>36</td><td><input type="button" style="width:75px" value="xxx.x" id="a36" onclick="moveToTrack(36);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(36);"/></td></tr>
+			</table>
+			<hr />
+			<!-- Display and set various variables saved settings.json -->
+			<label data-i18n-key="degreesPerStep">Degrees per step:</label>&nbsp;<input type="number" id="degreesPerStep" min="0" max="360" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="microStepsPerStep">Microsteps per step:</label>&nbsp;<input type="number" id="microStepsPerStep" min="1" max="256" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="stepperReduction">Stepper reduction factor:</label>&nbsp;<input type="number" id="stepperReduction" min="0" max="1" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="driverMinimalMicroSec">Delay between commands (µs):</label>&nbsp;<input type="number" id="driverMinimalMicroSec" min="1" max="100" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="requiredRPM">Turntable RPM:</label>&nbsp;<input type="number" id="requiredRPM" min="0" max="6" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="adjustPosition">Adjust position</label>&nbsp;<input type="checkbox" id="adjustPosition" onchange="changed(this);"><br>
+			<hr />
+			<label data-i18n-key="enableEncoder">Use encoder</label>&nbsp;<input type="checkbox" id="enableEncoder" onchange="changed(this);"><br>
+			<label data-i18n-key="slaveId">Slave id:</label>&nbsp;<input type="number" id="slaveId" min="0" max="255" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="regId">Register id:</label>&nbsp;<input type="number" id="regId" min="0" max="255" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="encoderOffsetAngle">Encoder angle:</label>&nbsp;<label id="encoderOffsetAngle"></label>&deg;<br>
+			<hr />
+			<label data-i18n-key="radius">Sensitive zones radius:</label>&nbsp;<input type="number" id="radius" min="10" max="55" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="maxDelta">Sensitive zones width:</label>&nbsp;<input type="number" id="maxDelta" min="1" max="10" style="width:60px" onchange="changed(this);"><br>
+			<hr />
+			<label data-i18n-key="enableSound">Activate sound</label>&nbsp;<input type="checkbox" id="enableSound" onchange="changed(this);"><br>
+			<label data-i18n-key="soundVolume">Sound volume:</label>&nbsp;<input type="number" id="soundVolume" min="1" max="30" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="beforeSoundIndex">Before rotation sound index:</label>&nbsp;<input type="number" id="beforeSoundIndex" min="0" max="256" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="beforeSoundDuration">Before rotation sound rotation:</label>&nbsp;<input type="number" id="beforeSoundDuration" min="0.1" max="10" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="moveSoundIndex">During rotation sound index:</label>&nbsp;<input type="number" id="moveSoundIndex" min="0" max="256" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="afterSoundIndex">After rotation sound index:</label>&nbsp;<input type="number" id="afterSoundIndex" min="0" max="256" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="afterSoundDuration">After rotation sound duration:</label>&nbsp;<input type="number" id="afterSoundDuration" min="0.1" max="10" style="width:60px" onchange="changed(this);"><br>
+			<hr />
+			<label data-i18n-key="ssid">Wifi SSID:</label>&nbsp;<input type="text" id="ssid" maxlen="32" size="32" onchange="changed(this);"><br>
+			<label data-i18n-key="pwd">Password:</label>&nbsp;<input type="text" id="pwd" maxlen="32" size="32" onchange="changed(this);"><br>
+			<label data-i18n-key="name">Module name:</label>&nbsp;<input type="text" id="name" maxlen="32" size="32" onchange="changed(this);"><br>
+			<label data-i18n-key="traceCode">Display code traces</label>&nbsp;<input type="checkbox" id="traceCode" onchange="changed(this);"><br>
+			<label data-i18n-key="traceDebug">Display modules traces</label>&nbsp;<input type="checkbox" id="traceDebug" onchange="changed(this);"><br>
+			<hr />
+		</div> 
+	</body>
+</html>
