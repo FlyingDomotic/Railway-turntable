@@ -65,17 +65,7 @@ void StepperCommand::begin(){
 //       input:
 //           _angle: angle to rotate stepper, in degrees
 void StepperCommand::rotateAngle(float _angle){
-  unsigned long microSteps = (abs(_angle) + (abs(anglePerMicroStep()) / 2.0)) * microStepsPerStep / (degreesPerStep * stepperReduction);
-  if (traceDebug) {
-      Serial.printf("Stepper needs %ld micro-steps of %.3f ms to turn about %.1f ° in %.1f s\n", microSteps, stepDuration * 1000.0, _angle, microSteps * stepDuration);
-  }
-
-  // Set correct direction
-  if (_angle < 0.0) {
-    setDirection(-1);
-  } else {
-    setDirection(1);
-  }
+  unsigned long microSteps = microStepsForAngle(_angle);
   
   // Rotate stepper the right number of micro-steps
   for (unsigned long i=0; i < microSteps; i++){
@@ -94,16 +84,16 @@ void StepperCommand::rotateAngle(float _angle){
 //       side effect:
 //           stepper direction has been set
 unsigned long StepperCommand::microStepsForAngle(float _angle){
-  unsigned long microSteps = (abs(_angle) + (abs(anglePerMicroStep()) / 2.0)) * microStepsPerStep / (degreesPerStep * stepperReduction);
+  unsigned long microSteps = (abs(_angle) + (abs(anglePerMicroStep()) / 2.0)) * microStepsPerStep * stepperReduction / degreesPerStep;
   if (microSteps) {
     if (traceDebug) {
         Serial.printf("Stepper needs %ld micro-steps of %.3f ms to turn about %f° in %f s\n", microSteps, stepDuration * 1000.0, _angle, microSteps * stepDuration);
     }
     // Set correct direction
     if (_angle < 0.0) {
-      setDirection(-1);
-    } else {
       setDirection(1);
+    } else {
+      setDirection(-1);
     }
   }
   return microSteps;
@@ -111,7 +101,7 @@ unsigned long StepperCommand::microStepsForAngle(float _angle){
 
 //  Returns angle corresponding to one micro step
 float StepperCommand::anglePerMicroStep(void){
-  return currentDirection * degreesPerStep * stepperReduction / microStepsPerStep;
+  return currentDirection * degreesPerStep / (microStepsPerStep  * stepperReduction);
 }
 
 // Set stepper direction

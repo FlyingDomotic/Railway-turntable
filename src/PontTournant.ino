@@ -1,6 +1,6 @@
 /*
- *	   Railway turntable control
- *	   Contrôle d'un pont tournant férroviaire miniature
+ *	   English: Railway turntable control
+ *	   Français : Contrôle d'un pont tournant férroviaire miniature
  *
  *	Hardware
  *		ESP8266
@@ -23,10 +23,10 @@
  *			D0 (enablePin) : Stepper enable signal
  *			D1 (pulsePin) : Stepper pulse signal
  * 			D2 (directionPin) : Stepper direction signal
+ *			D3 (runPin) : Set to high during rotation (LED command)
+ *			D4 (mp3Pin) : MP3 module communication line (one line)
  *			D5 (rxPin) : RS485 RX pin
  *			D6 (txPin) : RS485 TX pin
- *			D7 (mp3Pin) : MP3 module communication line (one line)
- *			D8 (runPin) : Set to high during rotation (LED command)
  *
  *	Connexions
  *		Par défaut, les pinoches suivantes sont définies dans le fichier preference.h :
@@ -38,7 +38,26 @@
  *			D7 (mp3Pin) : Ligne de communication (one line) du module MP3
  *			D8 (runPin) : Haut pendant la rotation (commande LED)
  *
- *	V1.0.0 FF - Mars 2024 - Pour le FabLab
+ *	Available URL
+ *		/			Root page (displays turntable allowing clicking on tracks)
+ *		/status		Returns status in JSON format
+ *		/goto/<nnn>	Rurns turntable in front of track <nnn>
+ *		/setup		Display setup page
+ *		/edit		Manage and edit flie system
+ *		/settings	Returns settings in JSON format
+ *		/debug		Display internal variables to debug
+ *
+ *
+ * 	URL disponibles
+ *		/			Page d'accueil (affiche le pont et permet de cliquer sur les voies)
+ *		/status		Retourne l'état sous forme JSON
+ *		/goto/<nnn>	Tourne le pont en face de la voie <nnn>
+ *		/setup		Affiche la page de configuration
+ *		/edit		Gère et édite le système de fichier
+ *		/settings	Retourne la configuration au format JSON
+ *		/debug		Affiche les variables internes pour déverminer
+ *
+ *	V1.0.0 FF - Mars 2024 - For Fablab/Pour le FabLab
  *
  *	GNU GENERAL PUBLIC LICENSE - Version 3, 29 June 2007
  *
@@ -86,7 +105,14 @@ enum stepperState {													// Rotation states
 	stepperFixing
 };
 stepperState rotationState = stepperStopped;						// Rotation current state
-#define MIN_DELTA_ANGLE 0.01										// Minimum delta before sending angle change
+#define MIN_DELTA_ANGLE 0.02										// Minimum delta before sending angle change
+const char stepperStateText0[] PROGMEM = "Stopped";
+const char stepperStateText1[] PROGMEM = "Starting";
+const char stepperStateText2[] PROGMEM = "Running";
+const char stepperStateText3[] PROGMEM = "Stopping";
+const char stepperStateText4[] PROGMEM = "Fixing";
+const char *const stepperStateTable[] PROGMEM = {stepperStateText0, stepperStateText1, stepperStateText2, stepperStateText3, stepperStateText4};
+
 
 //	Encodeur
 RotationSensor encoder(rxPin, txPin, traceDebug);					// Encoder class
@@ -94,6 +120,7 @@ uint16_t resultValue;												// Encoder last result
 unsigned long resultValueTime = 0;									// Encoder last result time
 bool encoderReading = false;										// Is encoder reading?
 unsigned long encoderReadTime = 0;									// Save encoder read time
+Modbus::ResultCode encoderLastReadError;							// Last error returned by encoder
 
 // Lecteur MP3
 Mp3PlayerModuleWire player(mp3Pin);									// MP3 reader class
@@ -255,11 +282,14 @@ void writeSettings(void) {
 
 // called at end of Modbus transaction
 Modbus::ResultCode modbusCb(Modbus::ResultCode event, uint16_t transactionId, void* data) {
-	if (event != Modbus::EX_SUCCESS) {								// We got an error
+	if (event != encoderLastReadError) {							// Is return code different of last one?
 		if (traceDebug) {
-			Serial.printf("Read error: 0x%x\n", event);
+			Serial.printf("Read error is now: 0x%x\n", event);
+
 		}
-	} else {
+	encoderLastReadError = event;
+	}
+	if (event == Modbus::EX_SUCCESS) {								// We read succesfully
 		float angle = encoder.computeAngle(resultValue);			// Load angle from last result
 		if (abs(angle - lastAngleSent) >= MIN_DELTA_ANGLE) {		// Send message only if slightly different of previous one
 			if (traceDebug) {
@@ -400,13 +430,21 @@ void settingsReceived(AsyncWebServerRequest *request) {
 void debugReceived(AsyncWebServerRequest *request) {
 	// Send a json document with interresting variables
 	JsonDocument answer;
+	char text[50];
 	answer["lastAngleSent"] = lastAngleSent;
 	answer["currentAngle"] = currentAngle;
 	answer["requiredAngle"] = requiredAngle;
 	answer["microStepsToGo"] = microStepsToGo;
 	answer["rotationState"] = rotationState;
+	if (rotationState < 0 || rotationState >= sizeof(stepperStateTable)) {
+		snprintf_P(text, sizeof(text), PSTR("??? %d ???"), rotationState);
+	} else {
+		strncpy_P(text, (char *)pgm_read_ptr(&(stepperStateTable[rotationState])), sizeof(text));
+	}
+	answer["rotationStateText"] = text;
 	answer["encoderReading"] = encoderReading;
 	answer["encoderReadTime"] = millis() - encoderReadTime;
+	answer["encoderLastReadError"] = encoderLastReadError;
 	answer["resultValue"] = resultValue;
 	answer["resultValueTime"] = millis() - resultValueTime;
 	answer["playerStartedTime"] = millis() - playerStartedTime;
@@ -780,7 +818,7 @@ void setup() {
 		char buffer[32];
 		// Load this Wifi access point name as "PontTournant" plus ESP chip Id
 		snprintf(buffer, sizeof(buffer),"PontTournant_%X", ESP.getChipId());
-		Serial.print("\nCreating %s access point\n");
+		Serial.printf("\nCreating %s access point\n", buffer);
 		WiFi.softAP(buffer, "");									// Starts Wifi access point
 		adresseIP = WiFi.softAPIP();								// Server IP address
 	}
@@ -896,14 +934,14 @@ void loop() {
 	}
 	
 	if ((enableEncoder && !encoder.active()) || !enableEncoder) {	// Encoder (enabled and not running) or (not enabled)
-		if ((millis() - resultValueTime) > 250) {					// Last result too old?
+		if ((millis() - resultValueTime) > 500) {					// Last result too old?
 			if (enableEncoder) {									// Encoder enabled?
 				if (!encoderReading) {
-					encoder.getAngle(&resultValue);					// Restart request
 					encoderReading = true;							// Encoder reading
 					encoderReadTime = millis();						// Read start time
+					encoder.getAngle(&resultValue);					// Restart request
 				} else {
-					if ((millis() - encoderReadTime) > 1000) {		// Timeout reading?
+					if ((millis() - encoderReadTime) > 500) {		// Timeout reading? ()
 						encoderReading = false;						// Reset encoder reading
 					}
 				}
@@ -916,9 +954,9 @@ void loop() {
 					char msg[10];									// Message buffer
 					snprintf_P(msg, sizeof(msg), PSTR("%.2f"), currentAngle);	// Convert angle to message
 					events.send(msg, "angle");						// Send an "angle" message
+					lastAngleSent = currentAngle;					// Save last angle sent
 				}
 				resultValueTime = millis();							// Save time of last result
-				lastAngleSent = currentAngle;						// Save last angle sent
 			}
 		}
 	}

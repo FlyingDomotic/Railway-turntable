@@ -81,8 +81,8 @@ git clone https://github.com/FlyingDomotic/railwayTurntable.git railwayTurntable
    - Stepper direction optocoupler is connected to D2
    - RS485 RX signal is connected to D5
    - RS485 TX signal is connected to D6
-   - Optional MP3 module (one line protocol pin 4) is connected to D7 (Dip switches 1 & 3 should be set to 1, 2 to 0)
-   - Optional rotation LED optocoupler is connected to D8
+   - Optional MP3 module (one line protocol pin 4) is connected to D4 (Dip switches 1 & 3 should be set to 1, 2 to 0)
+   - Optional rotation LED optocoupler is connected to D3
 3. Compile and load code into ESP.
 4. Load data folder into ESP flash.
 5. Start ESP and connect to Wifi SSID "PontTournant_XXXXXX" (where XXXXXX represent ESP chip ID)
@@ -103,8 +103,8 @@ git clone https://github.com/FlyingDomotic/railwayTurntable.git railwayTurntable
    - L'opto coupleur "direction" à D2
    - Le signal RX du module RS485 à D5
    - Le signal TX du module RS485 à D6
-   - La pinoche 4 (one line protocol) du module MP3 optionnel à D7 (les micro interrupteurs 1 et 3 doivent être à 1, le 2 à 0)
-   - l'opto coupleur de la LED de rotation optionnelle à D8.
+   - La pinoche 4 (one line protocol) du module MP3 optionnel à D4 (les micro interrupteurs 1 et 3 doivent être à 1, le 2 à 0)
+   - l'opto coupleur de la LED de rotation optionnelle à D3.
 3. Compiler et charger le code dans l'ESP.
 4. Charger le contenu du répertoire "data" dans la flash de l'ESP.
 5. Démarrer l'ESP et se connecter au SSID Wifi SSID "PontTournant_XXXXXX" (où XXXXXX représente l'ID du chip ESP)
@@ -120,11 +120,13 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir l
   - Degrees per step: Give number of degrees corresponding to one step. For example, a stepper with 200 steps per revolution will make 200/360 = 1,8° per step.
   - Micro-steps per step: Give count of micro-steps per step. Depends on driver.  Look at driver's doc and copy value choosen on driver.
   - Delay between commands (µs: Give minimal delay between 2 commands. Given in driver's doc.
+  - Stepper reduction factor: Number of rotation of stepper for one rotation of turntable (1.0 if no reduction, 3.0 if 3 stepper steps are needed to get one turntable step).
   - Turntable RPM: Give desired turntable rotation speed. Often, between 1 and 2 RPM.
 
   - Degrés par pas : Indiquer le nombre de degrés correspondant à 1 pas. Par exemple, un moteur avec 200 pas par tour fera 200/360 = 1,8° par pas.
   - Micro-pas par pas : Indiquer le nombre de micro-pas par pas. Dépend des réglages du driver. Voir la doc du driver et reporter la valeur choisie sur le driver.
   - Délai entre commandes (µs) : Indiquer le délai minimum entre 2 envois de commandes. Indiqué dans la doc du driver.
+  - Réduction moteur : nombre de tours du moteur pour un tour du pont (1.0 s'il n'y a pas de réducteur, 3.0 si 3 pas du moteur sont nécessaires pour avoir un pas sur le pont).
   - Tours par minute du pont : Indiquer la vitesse de rotation souhaitée du pont. En général, entre 1 et 2 tours par minute.
 
 #### Define encoder parameters/Définir les paramètres de l'encodeur
