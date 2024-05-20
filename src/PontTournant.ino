@@ -5,10 +5,10 @@
  *	Hardware
  *		ESP8266
  *		Stepper with driver (enable/pulse/direction) (for example NEMA 24 with DM556T)
- *		RS485 aboslute encoder (for example QY3806-485RTU )
+ *		RS485 aboslute encoder (for example QY3806-485RTU)
  *		Serial/RS485 adapter
  *		MP3 reader with XY-V17B chip (optional)
- *		Rotation LED(optional)
+ *		Rotation LED (optional)
  *
  *	Matériel
  *		ESP8266
@@ -127,40 +127,67 @@ Mp3PlayerModuleWire player(mp3Pin);									// MP3 reader class
 unsigned long playerStartedTime = 0;								// Last play time
 unsigned long playerDuration = 0;									// Play duration time
 
+//	---- Print rountines ----
+
+static void printInfo(const char* _format, ...) {
+	// Make the message
+	char msg[512];                              		// Message buffer (message truncated if longer than this)
+	va_list arguments;                                  // Variable argument list
+	va_start(arguments, _format);                       // Read arguments after _format
+	vsnprintf_P(msg, sizeof(msg), _format, arguments);	// Return buffer containing requested format with given arguments
+	va_end(arguments);                                  // End of argument list
+	Serial.print(msg);			                        // Print on SERIAL_PORT
+	events.send(msg, "info");							// Send message to destination
+}
+
+static void printError(const char* _format, ...) {
+	// Make the message
+	char msg[512];                              		// Message buffer (message truncated if longer than this)
+	va_list arguments;                                  // Variable argument list
+	va_start(arguments, _format);                       // Read arguments after _format
+	vsnprintf_P(msg, sizeof(msg), _format, arguments);	// Return buffer containing requested format with given arguments
+	va_end(arguments);                                  // End of argument list
+	Serial.print(msg);			                        // Print on SERIAL_PORT
+	events.send(msg, "error");							// Send message to destination
+}
+
 //	---- Preferences routines ----
 
 // Dumps all settings on screen
 void dumpSettings(void) {
-	Serial.printf("ssid = %s\n", ssid.c_str());
-	Serial.printf("pwd = %s\n", pwd.c_str());
-	Serial.printf("name = %s\n", espName.c_str());
-	Serial.printf("degreesPerStep = %.2f\n", degreesPerStep);
-	Serial.printf("microStepsPerStep = %d\n", microStepsPerStep);
-	Serial.printf("stepperReduction = %.2f\n", stepperReduction);
-	Serial.printf("driverMinimalMicroSec = %d\n", driverMinimalMicroSec);
-	Serial.printf("requiredRPM = %.2f\n", requiredRPM);
-	Serial.printf("maxDelta = %d\n", maxDelta);
-	Serial.printf("encoderOffsetAngle = %.2f\n", encoderOffsetAngle);
-	Serial.printf("imageOffsetAngle = %.2f\n", imageOffsetAngle);
-	Serial.printf("slaveId = %d\n", slaveId);
-	Serial.printf("regId = %d\n", regId);
-	Serial.printf("radius = %f\n", radius);
-	Serial.printf("enableSound = %s\n", enableSound ? "true" : "false");
-	Serial.printf("soundVolume = %d\n", soundVolume);
-	Serial.printf("beforeSoundIndex = %d\n", beforeSoundIndex);
-	Serial.printf("beforeSoundDuration = %.2f\n", beforeSoundDuration);
-	Serial.printf("moveSoundIndex = %d\n", moveSoundIndex);
-	Serial.printf("afterSoundIndex = %d\n", afterSoundIndex);
-	Serial.printf("afterSoundDuration = %.2f\n", afterSoundDuration);
-	Serial.printf("trackCount = %d\n", trackCount);
-	Serial.printf("traceDebug = %s\n", traceDebug ? "true" : "false");
-	Serial.printf("traceCode = %s\n", traceCode ? "true" : "false");
+	printInfo("ssid = %s\n", ssid.c_str());
+	printInfo("pwd = %s\n", pwd.c_str());
+	printInfo("name = %s\n", espName.c_str());
+	printInfo("degreesPerStep = %.2f\n", degreesPerStep);
+	printInfo("microStepsPerStep = %d\n", microStepsPerStep);
+	printInfo("invertStepper = %s\n", invertStepper ? "false" : "true");
+	printInfo("stepperReduction = %.2f\n", stepperReduction);
+	printInfo("driverMinimalMicroSec = %d\n", driverMinimalMicroSec);
+	printInfo("requiredRPM = %.2f\n", requiredRPM);
+	printInfo("maxDelta = %d\n", maxDelta);
+	printInfo("encoderOffsetAngle = %.2f\n", encoderOffsetAngle);
+	printInfo("clockwiseIncrement = %s\n", clockwiseIncrement ? "true" : "false");
+	printInfo("imageOffsetAngle = %.2f\n", imageOffsetAngle);
+	printInfo("slaveId = %d\n", slaveId);
+	printInfo("regId = %d\n", regId);
+	printInfo("radius = %f\n", radius);
+	printInfo("enableSound = %s\n", enableSound ? "true" : "false");
+	printInfo("soundVolume = %d\n", soundVolume);
+	printInfo("beforeSoundIndex = %d\n", beforeSoundIndex);
+	printInfo("beforeSoundDuration = %.2f\n", beforeSoundDuration);
+	printInfo("moveSoundIndex = %d\n", moveSoundIndex);
+	printInfo("afterSoundIndex = %d\n", afterSoundIndex);
+	printInfo("afterSoundDuration = %.2f\n", afterSoundDuration);
+	printInfo("trackCount = %d\n", trackCount);
+	printInfo("traceDebug = %s\n", traceDebug ? "true" : "false");
+	printInfo("traceCode = %s\n", traceCode ? "true" : "false");
+	printInfo("traceJava = %s\n", traceJava ? "true" : "false");
 
 	// Dump all defined angles
 	char name[10];
 	for (uint8_t i = 1; i <= POSITION_COUNT; i++) {
 		snprintf(name, sizeof(name), "a%d", i);
-		Serial.printf("%s = %.2f\n", name, indexes[i]);
+		printInfo("%s = %.2f\n", name, indexes[i]);
 	}
 }
 
@@ -168,7 +195,7 @@ void dumpSettings(void) {
 bool readSettings(void) {
 	File settingsFile = LittleFS.open(SETTINGS_FILE, "r");			// Open settings file
 	if (!settingsFile) {											// Error opening?
-		Serial.printf("Failed to open config file\n");
+		printError("Failed to open config file\n");
 		return false;
 	}
 
@@ -176,20 +203,34 @@ bool readSettings(void) {
 	auto error = deserializeJson(settings, settingsFile);			// Read settings
 	settingsFile.close();											// Close file
 	if (error) {													// Error reading JSON?
-		Serial.printf("Failed to parse config file\n");
+		printError("Failed to parse config file\n");
 		return false;
 	}
 
 	// Load all settings into corresponding variables
 	degreesPerStep = settings["degreesPerStep"].as<float>();
+	if (degreesPerStep <= 0.0) {
+		printError("degreesPerStep is %f, should be > 0\n", degreesPerStep);
+	}
 	microStepsPerStep = settings["microStepsPerStep"].as<uint16_t>();
+	if (microStepsPerStep == 0) {
+		printError("microStepsPerStep is %d, should be > 0\n", microStepsPerStep);
+	}
+	invertStepper = settings["invertStepper"].as<bool>();
 	stepperReduction = settings["stepperReduction"].as<float>();
+	if (stepperReduction <= 0.0) {
+		printError("stepperReduction is %f, should be > 0\n", stepperReduction);
+	}
 	driverMinimalMicroSec =settings["driverMinimalMicroSec"].as<uint16_t>();
 	requiredRPM = settings["requiredRPM"].as<float>();
+	if (requiredRPM <= 0.0) {
+		printError("requiredRPM is %f, should be > 0\n", requiredRPM);
+	}
 	maxDelta = settings["maxDelta"].as<uint8_t>();
 	enableEncoder = settings["enableEncoder"].as<bool>();
 	adjustPosition = settings["adjustPosition"].as<bool>();
 	encoderOffsetAngle = settings["encoderOffsetAngle"].as<float>();
+	clockwiseIncrement = settings["clockwiseIncrement"].as<bool>();
 	imageOffsetAngle = settings["imageOffsetAngle"].as<float>();
 	slaveId = settings["slaveId"].as<uint8_t>();
 	regId = settings["regId"].as<uint8_t>();
@@ -197,6 +238,7 @@ bool readSettings(void) {
 	trackCount = settings["trackCount"].as<uint8_t>();
 	traceDebug = settings["traceDebug"].as<bool>();
 	traceCode = settings["traceCode"].as<bool>();
+	traceJava = settings["traceJava"].as<bool>();
 	ssid = settings["ssid"].as<String>();
 	pwd = settings["pwd"].as<String>();
 	espName = settings["name"].as<String>();
@@ -217,8 +259,8 @@ bool readSettings(void) {
 	// Dump settings on screen
 	dumpSettings();
 	// Send values to stepper, encoder and player
-	stepper.setParams(degreesPerStep, microStepsPerStep, stepperReduction, driverMinimalMicroSec, requiredRPM, traceDebug);
-	encoder.setParams(encoderOffsetAngle, traceDebug);
+	stepper.setParams(degreesPerStep, microStepsPerStep, stepperReduction, invertStepper, driverMinimalMicroSec, requiredRPM, traceDebug);
+	encoder.setParams(encoderOffsetAngle, clockwiseIncrement, traceDebug);
 	player.set_volume(soundVolume);
 	return true;
 }
@@ -235,12 +277,14 @@ void writeSettings(void) {
 	settings["degreesPerStep"] = degreesPerStep;
 	settings["microStepsPerStep"] = microStepsPerStep;
 	settings["driverMinimalMicroSec"] = driverMinimalMicroSec;
+	settings["invertStepper"] = invertStepper;
 	settings["stepperReduction"] = stepperReduction;
 	settings["requiredRPM"] = requiredRPM;
 	settings["maxDelta"] = maxDelta;
 	settings["enableEncoder"] = enableEncoder;
 	settings["adjustPosition"] = adjustPosition;
 	settings["encoderOffsetAngle"] = encoderOffsetAngle;
+	settings["clockwiseIncrement"] = clockwiseIncrement;
 	settings["imageOffsetAngle"] = imageOffsetAngle;
 	settings["slaveId"] = slaveId;
 	settings["regId"] = regId;
@@ -254,6 +298,7 @@ void writeSettings(void) {
 	settings["afterSoundDuration"] = afterSoundDuration;
 	settings["traceDebug"] = traceDebug;
 	settings["traceCode"] = traceCode;
+	settings["traceJava"] = traceJava;
 	settings["trackCount"] = trackCount;
 	// Load all "axx" variables
 	for (uint8_t i = 1; i <= POSITION_COUNT; i++) {
@@ -263,18 +308,21 @@ void writeSettings(void) {
 
 	File settingsFile = LittleFS.open(SETTINGS_FILE, "w");			// Open settings file
 	if (!settingsFile) {											// Error opening?
-		Serial.printf("Can't open for write settings file\n");
+		printError("Can't open for write settings file\n");
 	}
 	uint16_t bytes = serializeJsonPretty(settings, settingsFile);	// Write JSON structure to file
 	if (!bytes) {													// Error writting?
-		Serial.printf("Can't write settings file\n");
+		printError("Can't write settings file\n");
 	}
 	settingsFile.flush();											// Flush file
 	settingsFile.close();											// Close it
 	// Reload variables into stepper, encoder and player
-	stepper.setParams(degreesPerStep, microStepsPerStep, stepperReduction, driverMinimalMicroSec, requiredRPM, traceDebug);
-	encoder.setParams(encoderOffsetAngle, traceDebug);
+	stepper.setParams(degreesPerStep, microStepsPerStep, stepperReduction, invertStepper, driverMinimalMicroSec, requiredRPM, traceDebug);
+	encoder.setParams(encoderOffsetAngle, clockwiseIncrement, traceDebug);
 	player.set_volume(soundVolume);
+	if (traceCode) {
+		printInfo("Sending settings event\n");
+	}
 	events.send("Ok", "settings");									// Send a "settings" (changed) event
 }
 
@@ -283,27 +331,12 @@ void writeSettings(void) {
 // called at end of Modbus transaction
 Modbus::ResultCode modbusCb(Modbus::ResultCode event, uint16_t transactionId, void* data) {
 	if (event != encoderLastReadError) {							// Is return code different of last one?
-		if (traceDebug) {
-			Serial.printf("Read error is now: 0x%x\n", event);
-
-		}
+	printError("Read error is now: 0x%x\n", event);
 	encoderLastReadError = event;
 	}
 	if (event == Modbus::EX_SUCCESS) {								// We read succesfully
-		float angle = encoder.computeAngle(resultValue);			// Load angle from last result
-		if (abs(angle - lastAngleSent) >= MIN_DELTA_ANGLE) {		// Send message only if slightly different of previous one
-			if (traceDebug) {
-				Serial.printf("Angle: %f (was %f)\n", angle, currentAngle);
-			}
-			// Envoyer un event de type "angle" au navigateur
-			char msg[10];											// Message buffer
-			snprintf_P(msg, sizeof(msg), PSTR("%f"), angle);		// Convert angle to message
-			events.send(msg, "angle");								// Send "angle" event
-			resultValueTime = millis();								// Load last value time
-			lastAngleSent = angle;									// Save last sent angle
-		}
-		currentAngle = angle;										// Current angle
-		fixPosition();												// Fix rotation angle
+		currentAngle = encoder.computeAngle(resultValue);			// Load current angle from last result
+		encoderReading = false;										// Encoder is not anymore reading
 	}
 	return Modbus::EX_SUCCESS;
 }
@@ -362,7 +395,7 @@ void moveToTrack(uint8_t index) {
 		startRotation();											// Start rotation phase
 	}
 	if (traceCode) {
-		Serial.printf("Current angle = %.2f, required angle = %.2f, delta angle = %.2f, micro step count = %ld, angle per micro step = %.2f\n", currentAngle, requiredAngle, deltaAngle, microStepsToGo, stepper.anglePerMicroStep());
+		printInfo("Current angle = %.2f, required angle = %.2f, delta angle = %.2f, micro step count = %ld, angle per micro step = %.2f\n", currentAngle, requiredAngle, deltaAngle, microStepsToGo, stepper.anglePerMicroStep());
 	}
 }
 
@@ -381,7 +414,7 @@ void fixPosition(void){
 			if (microStepsToGo) {									// Do we have to move?
 				rotationState = stepperFixing;						// Set proper state
 				if (traceCode) {
-					Serial.printf("Fix: Current angle = %.2f, required angle = %.2f, delta angle = %.2f, micro step count = %ld, angle per micro step = %.2f\n", currentAngle, requiredAngle, deltaAngle, microStepsToGo, stepper.anglePerMicroStep());
+					printInfo("Fix: Current angle = %.2f, required angle = %.2f, delta angle = %.2f, micro step count = %ld, angle per micro step = %.2f\n", currentAngle, requiredAngle, deltaAngle, microStepsToGo, stepper.anglePerMicroStep());
 				}
 			}
 		}
@@ -395,7 +428,7 @@ void playIndex(uint8_t index) {
 	playerStartedTime = millis();									// Load starting time
 	if (enableSound) {												// If sound enabled
 		if (traceCode) {
-			Serial.printf("Playing index %d\n", index);
+			printInfo("Playing index %d\n", index);
 		}
 		player.set_track_index(index);								// Set file index
 		player.play();												// Start playing file
@@ -406,7 +439,7 @@ void playIndex(uint8_t index) {
 void playStop() {
 	if (enableSound) {												// If sound enabled
 		if (traceCode) {
-			Serial.printf("Stop playing\n");
+			printInfo("Stop playing\n");
 		}
 		player.stop();
 	}
@@ -506,7 +539,7 @@ void statusReceived(AsyncWebServerRequest *request) {
 void clickReceived(AsyncWebServerRequest *request) {
 	String position = request->url().substring(1);
 	if (traceCode) {
-		Serial.printf("Received %s\n", position.c_str());
+		printInfo("Received %s\n", position.c_str());
 	}
 	// Try to locate closest track from clicked image
 	int8_t closestIndex = -1;										// Init closest track index
@@ -536,7 +569,7 @@ void clickReceived(AsyncWebServerRequest *request) {
 				}
 			}
 			if (traceCode) {
-				Serial.printf("Index: %d\n", closestIndex);
+				printInfo("Index: %d\n", closestIndex);
 			}
 			// Turn table to closest index, if found
 			if (closestIndex >=0) {
@@ -551,7 +584,7 @@ void clickReceived(AsyncWebServerRequest *request) {
 void moveReceived(AsyncWebServerRequest *request) {
 	String position = request->url().substring(1);
 	if (traceCode) {
-		Serial.printf("Received %s\n", position.c_str());
+		printInfo("Received %s\n", position.c_str());
 	}
 	int separator1 = position.indexOf("/");								// Position of first "/"
 	if (separator1 >= 0) {
@@ -574,7 +607,7 @@ void moveReceived(AsyncWebServerRequest *request) {
 void imgRefReceived(AsyncWebServerRequest *request) {
 	String position = request->url().substring(1);
 	if (traceCode) {
-		Serial.printf("Received %s\n", position.c_str());
+		printInfo("Received %s\n", position.c_str());
 	}
 	// Set image offset (difference with current version)
 	imageOffsetAngle = encoder.floatModuloPositive(imageOffsetAngle - currentAngle, 360.0);
@@ -587,7 +620,7 @@ void imgRefReceived(AsyncWebServerRequest *request) {
 void gotoReceived(AsyncWebServerRequest *request) {
 	String position = request->url().substring(1);
 	if (traceCode) {
-		Serial.printf("Received %s\n", position.c_str());
+		printInfo("Received %s\n", position.c_str());
 	}
 	int separator1 = position.indexOf("/");							// Position of first "/"
 	if (separator1 >= 0) {
@@ -615,7 +648,7 @@ void gotoReceived(AsyncWebServerRequest *request) {
 void setAngleReceived(AsyncWebServerRequest *request) {
 	String position = request->url().substring(1);
 	if (traceCode) {
-		Serial.printf("Received %s\n", position.c_str());
+		printInfo("Received %s\n", position.c_str());
 	}
 	int separator1 = position.indexOf("/");							// Position of first "/"
 	if (separator1 >= 0) {
@@ -625,10 +658,12 @@ void setAngleReceived(AsyncWebServerRequest *request) {
 			indexes[1] = 0.0;										// Angle is zerp
 			encoderOffsetAngle = encoder.floatModuloPositive(
 					encoderOffsetAngle + currentAngle, 360.0);		// Set encoder offset
+			writeSettings();
 		} else {
 			// Check for track limits (as users can send this request)
 			if (track > 0 && track <= trackCount)  {
 				indexes[track] = currentAngle;							// Set current angle to track
+				writeSettings();
 				request->send_P(200, "", "<status>Ok</status>");
 				return;
 			}
@@ -637,7 +672,6 @@ void setAngleReceived(AsyncWebServerRequest *request) {
 			request->send_P(400, "", msg);
 			return;
 		}
-		writeSettings();
 	}
 	char msg[50];											// Buffer for message
 	snprintf(msg, sizeof(msg),"<status>Can't understand %s</status>", request->url().c_str());
@@ -648,7 +682,7 @@ void setAngleReceived(AsyncWebServerRequest *request) {
 void setChangedReceived(AsyncWebServerRequest *request) {
 	String position = request->url().substring(1);
 	if (traceCode) {
-		Serial.printf("Received %s\n", position.c_str());
+		printInfo("Received %s\n", position.c_str());
 	}
 	int separator1 = position.indexOf("/");							// Position of first "/"
 	if (separator1 >= 0) {
@@ -665,8 +699,12 @@ void setChangedReceived(AsyncWebServerRequest *request) {
 				degreesPerStep = fieldValue.toFloat();
 			} else if (fieldName == "microStepsPerStep") {
 				microStepsPerStep = fieldValue.toInt();
+			} else if (fieldName == "invertStepper") {
+				invertStepper = (fieldValue == "true");
 			} else if (fieldName == "stepperReduction") {
 				stepperReduction = fieldValue.toFloat();
+			} else if (fieldName == "clockwiseIncrement") {
+				clockwiseIncrement = (fieldValue == "true");
 			} else if (fieldName == "driverMinimalMicroSec") {
 				driverMinimalMicroSec = fieldValue.toInt();
 			} else if (fieldName == "requiredRPM") {
@@ -683,6 +721,8 @@ void setChangedReceived(AsyncWebServerRequest *request) {
 				traceDebug = (fieldValue == "true");
 			} else if (fieldName == "traceCode") {
 				traceCode = (fieldValue == "true");
+			} else if (fieldName == "traceJava") {
+				traceJava = (fieldValue == "true");
 			} else if (fieldName == "ssid") {
 				ssid = fieldValue;
 			} else if (fieldName == "pwd") {
@@ -709,7 +749,7 @@ void setChangedReceived(AsyncWebServerRequest *request) {
 				afterSoundDuration = fieldValue.toFloat();
 			} else {
 				// This is not a known field
-				Serial.printf("Can't set field %s\n", fieldName.c_str());
+				printError("Can't set field %s\n", fieldName.c_str());
 				char msg[50];											// Buffer for message
 				snprintf(msg, sizeof(msg),"<status>Bad field name %s", fieldName.c_str());
 				request->send_P(400, "", msg);
@@ -840,7 +880,7 @@ void setup() {
 
 	events.onConnect([](AsyncEventSourceClient *client){			// Routine called when a client connects
 		float angle = encoder.computeAngle(resultValue);
-		// Sends an "angle" and a "data" events to connecting client
+		// Sends an "angle" events to connecting client
 		char msg[10];
 		if (enableEncoder) {
 			snprintf_P(msg, sizeof(msg), PSTR("%.2f"), angle);
@@ -848,7 +888,6 @@ void setup() {
 			snprintf_P(msg, sizeof(msg), PSTR("%.2f"), currentAngle);
 		}
 		client->send(msg, "angle");
-		client->send("Ok", "data");
 	});
 
     // List of URL to be intercepted and treated locally before a standard treatment
@@ -933,22 +972,18 @@ void loop() {
 		}
 	}
 	
-	if ((enableEncoder && !encoder.active()) || !enableEncoder) {	// Encoder (enabled and not running) or (not enabled)
-		if ((millis() - resultValueTime) > 500) {					// Last result too old?
 			if (enableEncoder) {									// Encoder enabled?
-				if (!encoderReading) {
+		if ((millis() - encoderReadTime) > 1000) {					// Last reading more than a second?
 					encoderReading = true;							// Encoder reading
 					encoderReadTime = millis();						// Read start time
 					encoder.getAngle(&resultValue);					// Restart request
-				} else {
-					if ((millis() - encoderReadTime) > 500) {		// Timeout reading? ()
-						encoderReading = false;						// Reset encoder reading
 					}
 				}
-			} else {												// Encoder disabled (manual mode)
+
+	if ((millis() - resultValueTime) > 500) {						// Last result sent more than 0.5 seconds?
 				if (abs(currentAngle - lastAngleSent) >= MIN_DELTA_ANGLE) {	// Send message only if there's a slight difference
-					if (traceDebug) {
-						Serial.printf("Angle: %f\n", currentAngle);
+			if (traceCode) {
+				printInfo("Angle: %f\n", currentAngle);
 					}
 					// Sends an "angle" event to browser
 					char msg[10];									// Message buffer
@@ -957,8 +992,6 @@ void loop() {
 					lastAngleSent = currentAngle;					// Save last angle sent
 				}
 				resultValueTime = millis();							// Save time of last result
-			}
-		}
 	}
 
 	ArduinoOTA.handle();											// Give hand to OTA

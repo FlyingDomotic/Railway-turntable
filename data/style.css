@@ -27,3 +27,13 @@ td {
 canvas {
     border: 1px solid black;
 }
+
+.smallScroll {
+  overflow-y: scroll;
+  height:35px;
+}
+
+.largeScroll {
+  overflow-y: scroll;
+  height:350px;
+}

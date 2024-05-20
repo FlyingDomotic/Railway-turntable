@@ -22,9 +22,10 @@ void RotationSensor::begin(void){
 }
 
 //  Set parameters
-void RotationSensor::setParams(float _offsetAngle, bool _traceDebug) {
-  offsetAngle = _offsetAngle;     // Angle of zero degrees position (depends on hardware)
-  traceDebug = _traceDebug;       // Trace debug messages?
+void RotationSensor::setParams(float _offsetAngle, bool _clockwiseIncrement, bool _traceDebug) {
+  offsetAngle = _offsetAngle;               // Angle of zero degrees position (depends on hardware)
+  clockwiseIncrement = _clockwiseIncrement; // Is encoder incrementing clockwisely?
+  traceDebug = _traceDebug;                 // Trace debug messages?
 }
 
 // Loop for this module
@@ -54,7 +55,10 @@ void RotationSensor::getAngle(uint16_t *result){
 //   returns:
 //       angle, in degrees, corresponding to data
 float RotationSensor::computeAngle(uint16_t valueRead) {
-    return floatModuloPositive(((360.0 * valueRead) / 65536.0) - offsetAngle,  360.0);
+    if (clockwiseIncrement) {
+      return floatModuloPositive(((360.0 * valueRead) / 65536.0) - offsetAngle,  360.0);
+    }
+    return floatModuloPositive(((360.0 * valueRead) / 65536.0) - offsetAngle - 360.0,  360.0);
 }
 
 RotationSensor& RotationSensor::setCallback(std::function<Modbus::ResultCode(Modbus::ResultCode event, uint16_t transactionId, void* data)> callback) {

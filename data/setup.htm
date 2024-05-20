@@ -13,6 +13,9 @@
 		<div>
 			<canvas id="canvas" width="600" height="600" onmouseup="sendLocationPct(event);"></canvas>
 		</div>
+		<hr />
+		<div id="messages" class="smallScroll"></div>
+		<hr />
 		<!-- Language selector (default to user's first prefered language matching those available (en,fr), (en) else) -->
 		<div>
 			<label data-i18n-key="languageSelector">Language </label>&nbsp;
@@ -49,7 +52,7 @@
 			<label data-i18n-key="trackCount">Track count:</label>&nbsp;<input type="number" id="trackCount" min="2" max="36" style="width:60px" onchange="changed(this);"><br>
 			<hr />
 			<table>
-				<!-- Display a table with 3 columns: track number (1 to track count, button with track angle and button (<--) to set track to current angle) -->
+				<!-- Display a table with 3 columns: track number (1 to track count, button with track angle and button (<-) to set track to current angle) -->
 				<tr><th id="thTrack" data-i18n-key="thTrack">Track</th><th id="thAngle" data-i18n-key="thAngle">Angle</th><th id="thDefinition" data-i18n-key="thDefinition">D&eacute;finition</th></tr>
 				<tr id="l1"><td>1</td><td><input type="button" style="width:75px" value="xxx.x" id="a1" onclick="moveToTrack(1);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(1);"/></td></tr>
 				<tr id="l2"><td>2</td><td><input type="button" style="width:75px" value="xxx.x" id="a2" onclick="moveToTrack(2);" /></td><td><input type="button" style="width:50 px" value="<--" onclick="setAngle(2);"/></td></tr>
@@ -95,13 +98,14 @@
 			<label data-i18n-key="stepperReduction">Stepper reduction factor:</label>&nbsp;<input type="number" id="stepperReduction" min="0" max="1" style="width:60px" onchange="changed(this);"><br>
 			<label data-i18n-key="driverMinimalMicroSec">Delay between commands (µs):</label>&nbsp;<input type="number" id="driverMinimalMicroSec" min="1" max="100" style="width:60px" onchange="changed(this);"><br>
 			<label data-i18n-key="requiredRPM">Turntable RPM:</label>&nbsp;<input type="number" id="requiredRPM" min="0" max="6" style="width:60px" onchange="changed(this);"><br>
-			<label data-i18n-key="stepperReduction">Stepper reduction</label>&nbsp;<input type="number" id="afterSoundDuration" min="1" max="50" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="invertStepper">Invert stepper rotation</label>&nbsp;<input type="checkbox" id="invertStepper" onchange="changed(this);"><br>
 			<label data-i18n-key="adjustPosition">Adjust position</label>&nbsp;<input type="checkbox" id="adjustPosition" onchange="changed(this);"><br>
 			<hr />
 			<label data-i18n-key="enableEncoder">Use encoder</label>&nbsp;<input type="checkbox" id="enableEncoder" onchange="changed(this);"><br>
 			<label data-i18n-key="slaveId">Slave id:</label>&nbsp;<input type="number" id="slaveId" min="0" max="255" style="width:60px" onchange="changed(this);"><br>
 			<label data-i18n-key="regId">Register id:</label>&nbsp;<input type="number" id="regId" min="0" max="255" style="width:60px" onchange="changed(this);"><br>
 			<label data-i18n-key="encoderOffsetAngle">Encoder angle:</label>&nbsp;<label id="encoderOffsetAngle"></label>&deg;<br>
+			<label data-i18n-key="clockwiseIncrement">Clockwise increment</label>&nbsp;<input type="checkbox" id="clockwiseIncrement" onchange="changed(this);"><br>
 			<hr />
 			<label data-i18n-key="radius">Sensitive zones radius:</label>&nbsp;<input type="number" id="radius" min="10" max="55" style="width:60px" onchange="changed(this);"><br>
 			<label data-i18n-key="maxDelta">Sensitive zones width:</label>&nbsp;<input type="number" id="maxDelta" min="1" max="10" style="width:60px" onchange="changed(this);"><br>
@@ -119,6 +123,7 @@
 			<label data-i18n-key="name">Module name:</label>&nbsp;<input type="text" id="name" maxlen="32" size="32" onchange="changed(this);"><br>
 			<label data-i18n-key="traceCode">Display code traces</label>&nbsp;<input type="checkbox" id="traceCode" onchange="changed(this);"><br>
 			<label data-i18n-key="traceDebug">Display modules traces</label>&nbsp;<input type="checkbox" id="traceDebug" onchange="changed(this);"><br>
+			<label data-i18n-key="traceJava">Display Java traces</label>&nbsp;<input type="checkbox" id="traceJava" onchange="changed(this);"><br>
 			<hr />
 		</div> 
 	</body>

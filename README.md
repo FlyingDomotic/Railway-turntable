@@ -81,7 +81,7 @@ git clone https://github.com/FlyingDomotic/railwayTurntable.git railwayTurntable
    - Stepper direction optocoupler is connected to D2
    - RS485 RX signal is connected to D5
    - RS485 TX signal is connected to D6
-   - Optional MP3 module (one line protocol pin 4) is connected to D4 (Dip switches 1 & 3 should be set to 1, 2 to 0)
+   - Optional MP3 module (one line protocol pin 4) is connected to D4 (Dip switches 1 & 3 should be set to ON, 2 to OFF)
    - Optional rotation LED optocoupler is connected to D3
 3. Compile and load code into ESP.
 4. Load data folder into ESP flash.
@@ -103,7 +103,7 @@ git clone https://github.com/FlyingDomotic/railwayTurntable.git railwayTurntable
    - L'opto coupleur "direction" à D2
    - Le signal RX du module RS485 à D5
    - Le signal TX du module RS485 à D6
-   - La pinoche 4 (one line protocol) du module MP3 optionnel à D4 (les micro interrupteurs 1 et 3 doivent être à 1, le 2 à 0)
+   - La pinoche 4 (one line protocol) du module MP3 optionnel à D4 (les micro interrupteurs 1 et 3 doivent être à ON, le 2 à OFF)
    - l'opto coupleur de la LED de rotation optionnelle à D3.
 3. Compiler et charger le code dans l'ESP.
 4. Charger le contenu du répertoire "data" dans la flash de l'ESP.
@@ -119,24 +119,32 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir l
 #### Define stepper parameters/Définit les paramètres du moteur pas à pas
   - Degrees per step: Give number of degrees corresponding to one step. For example, a stepper with 200 steps per revolution will make 200/360 = 1,8° per step.
   - Micro-steps per step: Give count of micro-steps per step. Depends on driver.  Look at driver's doc and copy value choosen on driver.
-  - Delay between commands (µs: Give minimal delay between 2 commands. Given in driver's doc.
   - Stepper reduction factor: Number of rotation of stepper for one rotation of turntable (1.0 if no reduction, 3.0 if 3 stepper steps are needed to get one turntable step).
+  - Delay between commands (µs): Give minimal delay between 2 commands. Given in driver's doc.
   - Turntable RPM: Give desired turntable rotation speed. Often, between 1 and 2 RPM.
+  - Invert stepper rotation: tick to invert stepper rotation ;-)
+  - Adjust position: permanently read turntable position and realign it with required angle when selected.
 
   - Degrés par pas : Indiquer le nombre de degrés correspondant à 1 pas. Par exemple, un moteur avec 200 pas par tour fera 200/360 = 1,8° par pas.
   - Micro-pas par pas : Indiquer le nombre de micro-pas par pas. Dépend des réglages du driver. Voir la doc du driver et reporter la valeur choisie sur le driver.
-  - Délai entre commandes (µs) : Indiquer le délai minimum entre 2 envois de commandes. Indiqué dans la doc du driver.
   - Réduction moteur : nombre de tours du moteur pour un tour du pont (1.0 s'il n'y a pas de réducteur, 3.0 si 3 pas du moteur sont nécessaires pour avoir un pas sur le pont).
+  - Délai entre commandes (µs) : Indiquer le délai minimum entre 2 envois de commandes. Indiqué dans la doc du driver.
   - Tours par minute du pont : Indiquer la vitesse de rotation souhaitée du pont. En général, entre 1 et 2 tours par minute.
+  - Inverser le sens du moteur : cocher pour inverser le sens de rotation fu moteur ;-)
+  - Ajuster la position : lit en permanence la position du pont et la réaligne avec l'angle demandé si coché.
 
 #### Define encoder parameters/Définir les paramètres de l'encodeur
   - Use encoder: Tick to use encoder. If unselected, system should be manually positioned on track #1 when starting. Turntable angle will be computed instead of being read on encoder.
   - Slave id: Encoder's RS485 bus slave ID. See encoder's doc. Often 1.
   - Register id: Encoder's register number containing rotation angle. See encoder's doc. Often 0.
+  - Encoder angle: Give encoder offset angle to align turntable to track #1.
+  - Clockwise increment: tick when encoder increments angle clockwisely. Invert it if image turns a way and turntable the opposite one. 
 
   - Utiliser l'encodeur : Cocher pour utiliser l'encodeur. Si décoché, le système doit être positionné manuellement sur la voie 1 au lancement. L'angle du pont sera calculé au lieu d'être lu sur l'encodeur.
   - Numéro de l'esclave : Numéro de l'esclave sur le bus RS485. Voir la doc de l'encodeur. Couramment 1.
   - Numéro du registre : Numéro du registre contenant l'angle de rotation. Voir la doc de l'encodeur. Souvent 0.
+  - Angle de l'encodeur : Donner l'angle de l'encodeur pour aligner le pont sur la voie 1.
+  - Increment sens horaire : cocher si l'encodeur incremente l'angle dans le sens horaire. Inverser si le pont et l'image du pont tournent en sens opposés.
 
 #### Define sensitive zones parameters/Définir les paramètres des zones sensibles
   - Sensitive zones radius: Give sensitive zones radius, in image percentage. 0% maps centers, 50% image width.
@@ -174,15 +182,21 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir l
 #### Define trace parameters/Définir les paramètres de trace
   - Display code traces: Tick to display code's traces on ESP serial link. Used to debug.
   - Display modules traces: Tick to display modules' traces on ESP serial link. Used to debug.
+  - Display Java traces: tick to display Javascript traces. Used to debug.
 
   - Affichage des traces du code : Cocher pour afficher les traces du code sur le lien série de l'ESP. Utilisé pour déverminer.
   - Affichage des traces des modules : Cocher pour afficher les traces des modules sur le lien série de l'ESP. Utilisé pour déverminer.
+  - Affichage des traces Java : Cocher pour afficher les traces JavaScript. Utilisé pour déverminer.
 
 #### Stall track #1/Caler la voie 1
   - Stall track#1 on turn table using +/- 1/500 buttons.
+    - If (real) turntable turns clockwisely when hitting any of the "+" buttons, invert "Invert stepper rotation".
+    - If (real) turntable and image on browser are turning in opposite way, invert "Clockwise increment".
   - Click on "<--" of track #1 to save global stall.
 
   - Caler la voie 1 sur le le plateau avec les touches +/- 1/500.
+    - Si le pont (réel) tourne dans le sens des aiguilles d'une montre lorsqu'on appuie sur un des boutons "+", inverser "Inverser le sens du moteur"
+    - Si le pont (réel) et son image sur le navigatue tournent en sens opposé, inverser "Increment sens horaire".
   - Cliquer sur "<--" de la voie voie 1 pour mémoriser le calage global.
 
 #### Stall image on track #1/Caler l'image sur la voie 1
@@ -205,17 +219,17 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir l
   - Cliquer sur le bouton "<--" de la voie correspondante pour la mémoriser.
 
 ### Image used by Web interface setting/Image utilisée par l'interface Web
-We have now to setup web interface. Take a photo of turntable, in top view. Convert it in PNG format, adjust size to display it in one part in your browser, ensuring that center of turntable is exactly in center of image. Name it "imagePont.png".
+We have now to setup web interface. Take a photo of turntable, in top view. Convert it in PNG format, adjust size to display it in one part in your browser, ensuring that center of turntable is exactly in center of image. Name it "imagePont.png". To limit image size, it could be a good idea to save it with 8 or 16 bits palette. Don't forget to set transparency if needed.
 
-Then, duplicate image and name it "plaque.png". Select the center part (the rotating one), and remove external part. A good idea is to use GIMP, and make a rounded rectangle with 100% radius, then inverting selection, and cutting selection.
+Then, duplicate image and name it "plaque.png". Select the center part (the rotating one), and remove external part. A good idea is to use GIMP, and make a rounded rectangle with 100% radius, then inverting selection, and cutting selection. Again, to limit image size, it could be a good idea to save it with 8 or 16 bits palette. Don't forget to set (mandatory) transparency.
 
 Copy both files in data folder, then download data folder into ESP. Take care of image size. Too large, you won't be able to load them into flash (limited around 1 MB).
 
 When used, first image will be displayed as is, and second one will be overwritten in center, rotated the same angle as turntable.
 
-Reste à paramétrer l'interface Web. Prendre une photo du pont, vue de dessus. La convertir en PNG, ajuster la taille pour qu'elle soit affichable en une seule fois dans votre navigateur, en s'assurant que le centre de la plaque est exactement au centre de l'image. La nommer "imagePont.png".
+Reste à paramétrer l'interface Web. Prendre une photo du pont, vue de dessus. La convertir en PNG, ajuster la taille pour qu'elle soit affichable en une seule fois dans votre navigateur, en s'assurant que le centre de la plaque est exactement au centre de l'image. La nommer "imagePont.png". Pour limiter la taille de l'image, il peut être habile de l'enregistrer avec une palette 8 ou 16 bits. Ne pas oublier la transparence si utilisée.
 
-Dupliquer ensuite cette image en la nommant "plaque.png". Sélectionner le centre de l'image (la partie tournante), et supprimer la partie externe. Une façon de faire ça est d'utiliser GIMP, de faire une sélection rectangulaire arrondie, avec un rayon de 100%, d'inverser la sélection et de la supprimer.
+Dupliquer ensuite cette image en la nommant "plaque.png". Sélectionner le centre de l'image (la partie tournante), et supprimer la partie externe. Une façon de faire ça est d'utiliser GIMP, de faire une sélection rectangulaire arrondie, avec un rayon de 100%, d'inverser la sélection et de la supprimer. Encore une fois, il peut être habile de l'enregistrer avec une palette 8 ou 16 bits. Ne pas oublier la transparence obligatoire.
 
 Copier les 2 fichier dans le répertoire data, et le charger dans la flash de l'ESP. Attention à la taille des images : trop importantes, elles ne pourront pas être chargées en flash (limitée autour d'un MO).
 

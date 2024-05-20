@@ -10,7 +10,7 @@
 			public:
 				RotationSensor(uint8_t _rxPin,  uint8_t _txPin, bool _traceDebug);
 				void begin(void);
-				void setParams(float _offsetAngle, bool _traceDebug);
+				void setParams(float _offsetAngle, bool _clockwiseIncrement, bool _traceDebug);
 				void loop(void);
 				bool active(void);
 				float floatModuloPositive(float f, float modulo);
@@ -21,6 +21,7 @@
 			private:
 				std::function<Modbus::ResultCode(Modbus::ResultCode event, uint16_t transactionId, void* data)> callback;
 				float offsetAngle;
+				bool clockwiseIncrement;
 				uint8_t rxPin;
 				uint8_t txPin;
 				bool traceDebug;
