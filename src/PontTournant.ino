@@ -7,7 +7,7 @@
  *		Stepper with driver (enable/pulse/direction) (for example NEMA 24 with DM556T)
  *		RS485 aboslute encoder (for example QY3806-485RTU)
  *		Serial/RS485 adapter
- *		MP3 reader with XY-V17B chip (optional)
+ *		DFPlayer mini MP3 player (optional)
  *		Rotation LED (optional)
  *
  *	Matériel
@@ -15,7 +15,7 @@
  *		Moteur pas à pas avec driver (enable/pulse/direction) (par exemple NEMA 24 avec DM556T)
  *		Encodeur absolu RS485 (par exemple QY3806-485RTU)
  *		Adaptateur série/RS485
- *		Lecteur MP3 avec chip XY-V17B (optionnel)
+ *		Lecteur MP3 DFPlayer mini (optionnel)
  *		LED de rotation (optionnel)
  *
  *	Connections
@@ -24,19 +24,21 @@
  *			D1 (pulsePin) : Stepper pulse signal
  * 			D2 (directionPin) : Stepper direction signal
  *			D3 (runPin) : Set to high during rotation (LED command)
- *			D4 (mp3Pin) : MP3 module communication line (one line)
  *			D5 (rxPin) : RS485 RX pin
  *			D6 (txPin) : RS485 TX pin
+ *			D7 (mp3RxPin) : MP3 RX pin
+ *			D8 (mp3TxPin) : MP3 TX pin
  *
  *	Connexions
  *		Par défaut, les pinoches suivantes sont définies dans le fichier preference.h :
  *			D0 (enablePin) : Signal enable du moteur
  *			D1 (pulsePin) : Signal pulse du moteur
  * 			D2 (directionPin) : Signal direction du moteur
+ *			D3 (runPin) : Haut pendant la rotation (commande LED)
  *			D5 (rxPin) : RX du module RS485
  *			D6 (txPin) : TX du module RS485
- *			D7 (mp3Pin) : Ligne de communication (one line) du module MP3
- *			D8 (runPin) : Haut pendant la rotation (commande LED)
+ *			D7 (mp3RxPin) : MP3 RX pin
+ *			D8 (mp3TxPin) : MP3 TX pin
  *
  *	Available URL
  *		/			Root page (displays turntable allowing clicking on tracks)
@@ -70,11 +72,12 @@
 #include <preferences.h>											// Turn table preferences
 #include <stepperCommand.h>											// Stepper
 #include <rotationSensor.h>											// Encoder
-#include <mp3_player_module_wire.h>									// MP3 player
+#include <DFRobotDFPlayerMini.h>									// DFPlayer mini MP3 player
 #include <cmath>													// Math functions
 #include <LittleFS.h>												// Flash dile system
 #include <littleFsEditor.h>											// LittleFS file system editor
 #include <ArduinoJson.h>											// JSON documents
+#include <SoftwareSerial.h>											// Soft serial (for MP3 reader)
 
 //	---- Variables ----
 
@@ -123,7 +126,8 @@ unsigned long encoderReadTime = 0;									// Save encoder read time
 Modbus::ResultCode encoderLastReadError;							// Last error returned by encoder
 
 // Lecteur MP3
-Mp3PlayerModuleWire player(mp3Pin);									// MP3 reader class
+SoftwareSerial mp3Serial(mp3TxPin, mp3RxPin);			// Software serial for MP3 module
+DFRobotDFPlayerMini mp3Player;							// MP3 player class
 unsigned long playerStartedTime = 0;								// Last play time
 unsigned long playerDuration = 0;									// Play duration time
 
@@ -244,10 +248,10 @@ bool readSettings(void) {
 	espName = settings["name"].as<String>();
 	enableSound = settings["enableSound"].as<bool>();
 	soundVolume = settings["soundVolume"].as<uint8_t>();
-	beforeSoundIndex = settings["beforeSoundIndex"].as<uint8_t>();
+	beforeSoundIndex = settings["beforeSoundIndex"].as<uint16_t>();
 	beforeSoundDuration = settings["beforeSoundDuration"].as<float>();
-	moveSoundIndex = settings["moveSoundIndex"].as<uint8_t>();
-	afterSoundIndex = settings["afterSoundIndex"].as<uint8_t>();
+	moveSoundIndex = settings["moveSoundIndex"].as<uint16_t>();
+	afterSoundIndex = settings["afterSoundIndex"].as<uint16_t>();
 	afterSoundDuration = settings["afterSoundDuration"].as<float>();
 
 	// Read "axx" variables into a table
@@ -261,7 +265,6 @@ bool readSettings(void) {
 	// Send values to stepper, encoder and player
 	stepper.setParams(degreesPerStep, microStepsPerStep, stepperReduction, invertStepper, driverMinimalMicroSec, requiredRPM, traceDebug);
 	encoder.setParams(encoderOffsetAngle, clockwiseIncrement, traceDebug);
-	player.set_volume(soundVolume);
 	return true;
 }
 
@@ -319,7 +322,7 @@ void writeSettings(void) {
 	// Reload variables into stepper, encoder and player
 	stepper.setParams(degreesPerStep, microStepsPerStep, stepperReduction, invertStepper, driverMinimalMicroSec, requiredRPM, traceDebug);
 	encoder.setParams(encoderOffsetAngle, clockwiseIncrement, traceDebug);
-	player.set_volume(soundVolume);
+	mp3Player.volume(soundVolume);
 	if (traceCode) {
 		printInfo("Sending settings event\n");
 	}
@@ -430,8 +433,7 @@ void playIndex(uint8_t index) {
 		if (traceCode) {
 			printInfo("Playing index %d\n", index);
 		}
-		player.set_track_index(index);								// Set file index
-		player.play();												// Start playing file
+		mp3Player.play(index);										// Start playing file
 	}
 }
 
@@ -441,7 +443,7 @@ void playStop() {
 		if (traceCode) {
 			printInfo("Stop playing\n");
 		}
-		player.stop();
+		mp3Player.stop();
 	}
 }
 
@@ -919,8 +921,23 @@ void setup() {
 	encoder.setCallback(modbusCb);									// Modbus end request callback
 	encoder.begin();												// Encoder init
 
-	player.set_volume(soundVolume);									// Define volume (max = 30)
-	player.set_play_mode(1);										// Play mode: loop on file
+	mp3Serial.begin(9600);											// Serial link with MP3 module
+	if (!mp3Serial) {												// Serial link not opened
+		printError("MP3 serial pins invalid\n");
+	} else {
+		if (!mp3Player.begin(mp3Serial, true, true)) {				// Use serial to communicate with mp3
+			delay(500);
+			if (!mp3Player.begin(mp3Serial, true, false)) {			// Use serial to communicate with mp3
+				printError("MP3 module communication error\n");		// Module not initialized
+			} else {
+				mp3Player.volume(soundVolume);						// Define volume (max = 30)
+				mp3Player.enableLoop();								// Enable read loop
+			}
+		} else {
+			mp3Player.volume(soundVolume);							// Define volume (max = 30)
+			mp3Player.enableLoop();									// Enable read loop
+		}
+	}
 }
 
 // ---- Permanent loop ----
@@ -960,7 +977,7 @@ void loop() {
 			rotationState = stepperStopped;							// Set state back to stopper
 		}
 	} else if (rotationState == stepperStopped) {					// Are we stopped?
-		if (!enableEncoder) {										// Is encoder disabled (manual mode)?
+		if (adjustPosition) {										// Is Position fixing enabled
 			fixPosition();											// Fix position
 		}
 	}

@@ -46,13 +46,13 @@ Connection between ESP and rotary encoder is done by a simple RS485/TTL interfac
 
 An optional optocoupler is also available to connect a LED to signal turntable rotation.
 
-An optional MP3 reader, based on XY-V17B/DY-SV5W chip. It will allow to play a start sound during a settable time, a rotation sound, as long as turntable turns, and a stop sound during a settable time (all optional).
+An optional MP3 reader, based on DFPlayer Mini MP3 Player chip. It will allow to play a start sound during a settable time, a rotation sound, as long as turntable turns, and a stop sound during a settable time (all optional).
 
 La connexion entre l'ESP et le capteur de rotation est réalisée par un module RS485/TTL simple. Une petite interface à base d'opto coupleurs 4N25, avec une résistance de limitation côté LED, a été réalisée pour connecter le DM556 alimenté en 24V, alors que l'ESP est en 3,3V.
 
 Un opto coupleur est également disponible pour connecter une LED de rotation (optionnel).
 
-Un lecteur MP3, basé sur un chip XY-V17B/DY-SV5W peut également être ajouté (optionnel). Il permet de jouer un son de démarrage pendant une durée paramétrable, un son de rotation tant que le pont tourne, et un son d'arrêt pendant une durée paramétrable (tous optionnels).
+Un lecteur MP3, basé sur un chip DFPlayer Mini MP3 Player peut également être ajouté (optionnel). Il permet de jouer un son de démarrage pendant une durée paramétrable, un son de rotation tant que le pont tourne, et un son d'arrêt pendant une durée paramétrable (tous optionnels).
 
 ## Network/Réseau
 
@@ -77,12 +77,12 @@ git clone https://github.com/FlyingDomotic/railwayTurntable.git railwayTurntable
 ```
 2. Make ESP connections:
    - Stepper enable optocoupler is connected to D0 (optional as long as you force it permanently to low)
-   - Stepper pulse optocoupler is connected to D1
-   - Stepper direction optocoupler is connected to D2
+   - Stepper pulse optocoupler is connected to D7
+   - Stepper direction optocoupler is connected to D8
    - RS485 RX signal is connected to D5
    - RS485 TX signal is connected to D6
-   - Optional MP3 module (one line protocol pin 4) is connected to D4 (Dip switches 1 & 3 should be set to ON, 2 to OFF)
    - Optional rotation LED optocoupler is connected to D3
+   - Optional MP3 module (serial) is connected to D1 (TX) and D2 (RX)
 3. Compile and load code into ESP.
 4. Load data folder into ESP flash.
 5. Start ESP and connect to Wifi SSID "PontTournant_XXXXXX" (where XXXXXX represent ESP chip ID)
@@ -99,11 +99,11 @@ git clone https://github.com/FlyingDomotic/railwayTurntable.git railwayTurntable
 ```
 2. Connecter l'ESP:
    - L'opto coupleur "stepper enable" à D0 (optionnel si vous forcez le signal à l'état bas de façon permanente)
-   - L'opto coupleur "pulse" à D1
-   - L'opto coupleur "direction" à D2
+   - L'opto coupleur "pulse" à D7
+   - L'opto coupleur "direction" à D8
    - Le signal RX du module RS485 à D5
    - Le signal TX du module RS485 à D6
-   - La pinoche 4 (one line protocol) du module MP3 optionnel à D4 (les micro interrupteurs 1 et 3 doivent être à ON, le 2 à OFF)
+   - Le module MP3 optionnel à D1 (TX) et D2 (RX)
    - l'opto coupleur de la LED de rotation optionnelle à D3.
 3. Compiler et charger le code dans l'ESP.
 4. Charger le contenu du répertoire "data" dans la flash de l'ESP.
@@ -161,6 +161,7 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir l
   - During rotation sound index: MP3 index to play during rotation. Set to zero if not used.
   - After rotation sound index: MP3 index to play after rotation. Set to zero if not used.
   - After rotation sound duration (s): Duration (in seconds) of after rotation sound.
+Note: MP3 files should be written in /MP3 folder on SD card. Filenames should be from 0001.mp3 to 9999.mp3
 
   - Activer le son : Cocher pour activer le son globalement.
   - Volume sonore : Indiquer le volume sonore désiré (entre 0 et 30).
@@ -169,6 +170,7 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir l
   - Index son pendant rotation : Index du MP3 à lire pendant la rotation. Mettre à zéro si non utilisé.
   - Index son après rotation : Index du MP3 à lire avant la rotation. Mettre à zéro si non utilisé.
   - Durée son après rotation (s) : Durée (en secondes) de lecture du son après la rotation.
+Note: Les fichiers MP3 doivent être écrits dans le répertoire /MP3 de la carte SD. LEs noms doivent être entre 0001.mp3 et 9999.mp3.
 
 #### Define network parameters/Définir les paramètres réseau
   - Wifi SSID: Give Wifi existing SSId to use. If empty a "PontTournant_XXXXXX" private access point will be created.
