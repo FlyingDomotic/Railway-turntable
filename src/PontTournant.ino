@@ -1,7 +1,7 @@
 /*
  *	   English: Railway turntable control
- *	   Français : Contrôle d'un pont tournant férroviaire miniature
- *
+ *	   Français : Contrôle d'un pont tournant ferroviaire miniature
+ * 
  *	Hardware
  *		ESP8266
  *		Stepper with driver (enable/pulse/direction) (for example NEMA 24 with DM556T)
@@ -21,24 +21,24 @@
  *	Connections
  *		By default, the following pins are defined in preference.h file:
  *			D0 (enablePin) : Stepper enable signal
- *			D1 (pulsePin) : Stepper pulse signal
- * 			D2 (directionPin) : Stepper direction signal
+ *			D1 (mp3TxPin) : MP3 TX pin
+ *			D2 (mp3RxPin) : MP3 RX pin
  *			D3 (runPin) : Set to high during rotation (LED command)
  *			D5 (rxPin) : RS485 RX pin
  *			D6 (txPin) : RS485 TX pin
- *			D7 (mp3RxPin) : MP3 RX pin
- *			D8 (mp3TxPin) : MP3 TX pin
+ *			D7 (pulsePin) : Stepper pulse signal
+ * 			D8 (directionPin) : Stepper direction signal
  *
  *	Connexions
  *		Par défaut, les pinoches suivantes sont définies dans le fichier preference.h :
  *			D0 (enablePin) : Signal enable du moteur
- *			D1 (pulsePin) : Signal pulse du moteur
- * 			D2 (directionPin) : Signal direction du moteur
+ *			D1 (mp3TxPin) : MP3 TX pin
+ *			D2 (mp3RxPin) : MP3 RX pin
  *			D3 (runPin) : Haut pendant la rotation (commande LED)
  *			D5 (rxPin) : RX du module RS485
  *			D6 (txPin) : TX du module RS485
- *			D7 (mp3RxPin) : MP3 RX pin
- *			D8 (mp3TxPin) : MP3 TX pin
+ *			D7 (pulsePin) : Signal pulse du moteur
+ * 			D8 (directionPin) : Signal direction du moteur
  *
  *	Available URL
  *		/			Root page (displays turntable allowing clicking on tracks)
@@ -262,7 +262,7 @@ bool readSettings(void) {
 	}
 	// Dump settings on screen
 	dumpSettings();
-	// Send values to stepper, encoder and player
+	// Send values to stepper and encoder
 	stepper.setParams(degreesPerStep, microStepsPerStep, stepperReduction, invertStepper, driverMinimalMicroSec, requiredRPM, traceDebug);
 	encoder.setParams(encoderOffsetAngle, clockwiseIncrement, traceDebug);
 	return true;
@@ -353,7 +353,7 @@ void startRotation(void) {
 		rotationState = stepperRunning;								// Set to running by default
 		if (beforeSoundIndex) {										// Do we have a starting sound?
 			rotationState = stepperStarting;						// Set to starting
-			playerDuration = beforeSoundDuration * 1000.0;			// Convert duration to ms
+			playerDuration = beforeSoundDuration * 1000;			// Convert duration to ms
 			playIndex(beforeSoundIndex);							// Play sound
 		} else {
 			if (moveSoundIndex) {									// Do we have a rotation sound?
@@ -374,7 +374,7 @@ void startRotation(void) {
 void stopRotation(void) {
 	if (afterSoundIndex) {											// Do we have a stop sound?
 		rotationState = stepperStopping;							// Set to stopping
-		playerDuration = afterSoundDuration * 1000.0;				// Convert duration in ms
+		playerDuration = afterSoundDuration * 1000;					// Convert duration in ms
 		playIndex(afterSoundIndex);									// Play stopping sound
 		return;
 	}
@@ -427,12 +427,12 @@ void fixPosition(void){
 //	---- MP3 player routines ----
 
 // Play a given index
-void playIndex(uint8_t index) {
-	playerStartedTime = millis();									// Load starting time
+void playIndex(int index) {
 	if (enableSound) {												// If sound enabled
 		if (traceCode) {
 			printInfo("Playing index %d\n", index);
 		}
+		playerStartedTime = millis();								// Load starting time
 		mp3Player.play(index);										// Start playing file
 	}
 }
@@ -918,26 +918,22 @@ void setup() {
 	pinMode(runPin, OUTPUT);										// Set rotation pin to output mode
 	
 
-	encoder.setCallback(modbusCb);									// Modbus end request callback
-	encoder.begin();												// Encoder init
-
 	mp3Serial.begin(9600);											// Serial link with MP3 module
 	if (!mp3Serial) {												// Serial link not opened
 		printError("MP3 serial pins invalid\n");
 	} else {
-		if (!mp3Player.begin(mp3Serial, true, true)) {				// Use serial to communicate with mp3
-			delay(500);
-			if (!mp3Player.begin(mp3Serial, true, false)) {			// Use serial to communicate with mp3
-				printError("MP3 module communication error\n");		// Module not initialized
-			} else {
-				mp3Player.volume(soundVolume);						// Define volume (max = 30)
-				mp3Player.enableLoop();								// Enable read loop
+		if (!mp3Player.begin(mp3Serial, false, true)) {				// Use serial to communicate with mp3, disable ACK, enable reset
+			if (enableSound) {										// If sound is enabled
+				printError("Can't initialize MP3 reader");			// Show an error, else don't care as not used
 			}
 		} else {
 			mp3Player.volume(soundVolume);							// Define volume (max = 30)
 			mp3Player.enableLoop();									// Enable read loop
 		}
 	}
+
+	encoder.setCallback(modbusCb);									// Modbus end request callback
+	encoder.begin();												// Encoder init
 }
 
 // ---- Permanent loop ----
