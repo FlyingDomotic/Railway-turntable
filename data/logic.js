@@ -14,6 +14,7 @@ let inSetup = false;                                                // Are we in
 let img2 = 0;                                                       // Center turntable image
 let traceJava = false;                                              // Trace this java code
 let messagesExtended = false;                                       // Is messages div extended?
+let enableCircles = false;											// Are track circles enabled ton user view?
 
 // Display message on console and messages HTML element
 function showMessage(message, displayOnBrowser = true) {
@@ -108,13 +109,20 @@ function loadSettings(loadHtml) {
                     microStepsPerStep = parseFloat(jsonData[key]);
                 }
                 if (key == "traceJava") {
-                    traceJava = jsonData[key] == "true";
+					traceJava = jsonData[key] == true;
+				}
+				if (key == "enableCircles") {
+					enableCircles = jsonData[key] == true;
                 }
                 
             };
             // Reload image with new values
             turn(lastAngle);
         }
+		// Trace end of request with error
+		if (req.readyState === 4 && req.status != "200") {
+			showMessage(req.responseURL+" returned "+req.responseText);
+		}
     }
     // Ask for JSON file nammed settings.json
     req.responseType = "json";
@@ -209,6 +217,12 @@ function sendLocationPct(event) {
     // Send the request. Webserver will move to right track if click is close to a track
     const req = new XMLHttpRequest();
     req.open("GET", location.origin+'/pos/'+data);
+	req.onreadystatechange = function() {
+		// Trace end of request with error
+		if (req.readyState === 4 && req.status != "200") {
+			showMessage(req.responseURL+" returned "+req.responseText);
+		}
+	}
     req.send();
 }
 
@@ -273,15 +287,35 @@ function turn(angle) {
     ctx.translate(-(ctx.canvas.width/2), -(ctx.canvas.height/2));// Come back to origin and draw image
     ctx.drawImage(img2, canvas.width/2 - img2.width/2, canvas.height/2 -img2.height/2, img2.width, img2.height);
     ctx.restore();                                              // Restore context
-    if (inSetup) {                                              // If in setup
+	console.log("enableCircles: "+enableCircles);
+	if (inSetup || enableCircles) {								// If in setup or enableCircle is true
         drawCircles();                                          // Display circles
     }
+}
+
+// Executed when a "test sound" button is pushed. Index contains 1, 2 or 3 for before/during/after move sound test
+function testSound(index){
+	const req = new XMLHttpRequest();
+	req.open("GET", location.origin+'/tstsnd/'+index);
+	req.onreadystatechange = function() {
+		// Trace end of request with error
+		if (req.readyState === 4 && req.status != "200") {
+			showMessage(req.responseURL+" returned "+req.responseText);
+		}
+	}
+	req.send();
 }
 
 // Executed to request a move of a given (signed) count of steps
 function move(steps){
     const req = new XMLHttpRequest();
     req.open("GET", location.origin+'/move/'+steps);
+	req.onreadystatechange = function() {
+		// Trace end of request with error
+		if (req.readyState === 4 && req.status != "200") {
+			showMessage(req.responseURL+" returned "+req.responseText);
+		}
+	}
     req.send();
 }
 
@@ -289,6 +323,12 @@ function move(steps){
 function setImageReference() {
     const req = new XMLHttpRequest();
     req.open("GET", location.origin+'/imgref');
+	req.onreadystatechange = function() {
+		// Trace end of request with error
+		if (req.readyState === 4 && req.status != "200") {
+			showMessage(req.responseURL+" returned "+req.responseText);
+		}
+	}
     req.send();
 }
 
@@ -296,6 +336,12 @@ function setImageReference() {
 function moveToTrack(track) {
     const req = new XMLHttpRequest();
     req.open("GET", location.origin+'/goto/'+track);
+	req.onreadystatechange = function() {
+		// Trace end of request with error
+		if (req.readyState === 4 && req.status != "200") {
+			showMessage(req.responseURL+" returned "+req.responseText);
+		}
+	}
     req.send();
 }
 
@@ -304,6 +350,12 @@ function setAngle(line) {
     showMessage("# Set angle "+line+" #", traceJava);
     const req = new XMLHttpRequest();
     req.open("GET", location.origin+'/setangle/'+line);
+	req.onreadystatechange = function() {
+		// Trace end of request with error
+		if (req.readyState === 4 && req.status != "200") {
+			showMessage(req.responseURL+" returned "+req.responseText);
+		}
+	}
     req.send();
 }
 
@@ -316,6 +368,12 @@ function changed(object) {
     } else {
         req.open("GET", location.origin+'/changed/'+object.id+"/"+object.value);        // .value else
     }
+	req.onreadystatechange = function() {
+		// Trace end of request with error
+		if (req.readyState === 4 && req.status != "200") {
+			showMessage(req.responseURL+" returned "+req.responseText);
+		}
+	}
     req.send();
 }
 

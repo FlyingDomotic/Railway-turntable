@@ -43,7 +43,7 @@ function translatePage() {
 function translateElement(element) {
 	const key = element.getAttribute("data-i18n-key");
 	const translation = translations[key];
-	if (element.nodeName == "INPUT") {
+	if (element.nodeName == "INPUT" || element.nodeName == "BUTTON" ) {
   	element.value = translation;
 	} else {
   	element.innerText = translation;

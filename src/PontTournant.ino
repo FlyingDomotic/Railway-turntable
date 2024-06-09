@@ -47,8 +47,8 @@
  *		/setup		Display setup page
  *		/edit		Manage and edit flie system
  *		/settings	Returns settings in JSON format
+ *		/tstsnd/<x>	Test sound <x>, with 1=before rotation, 2=during rotation and 3=after rotation
  *		/debug		Display internal variables to debug
- *
  *
  * 	URL disponibles
  *		/			Page d'accueil (affiche le pont et permet de cliquer sur les voies)
@@ -57,6 +57,7 @@
  *		/setup		Affiche la page de configuration
  *		/edit		Gère et édite le système de fichier
  *		/settings	Retourne la configuration au format JSON
+ *		/tstsnd/<x>	Testele son <x>, 1=avant rotation, 2=pendant rotation and 3=après rotation
  *		/debug		Affiche les variables internes pour déverminer
  *
  *	V1.0.0 FF - Mars 2024 - For Fablab/Pour le FabLab
@@ -105,7 +106,8 @@ enum stepperState {													// Rotation states
 	stepperStarting,
 	stepperRunning,
 	stepperStopping,
-	stepperFixing
+	stepperFixing,
+	testingSound
 };
 stepperState rotationState = stepperStopped;						// Rotation current state
 #define MIN_DELTA_ANGLE 0.02										// Minimum delta before sending angle change
@@ -114,8 +116,8 @@ const char stepperStateText1[] PROGMEM = "Starting";
 const char stepperStateText2[] PROGMEM = "Running";
 const char stepperStateText3[] PROGMEM = "Stopping";
 const char stepperStateText4[] PROGMEM = "Fixing";
-const char *const stepperStateTable[] PROGMEM = {stepperStateText0, stepperStateText1, stepperStateText2, stepperStateText3, stepperStateText4};
-
+const char stepperStateText5[] PROGMEM = "TestingSound";
+const char *const stepperStateTable[] PROGMEM = {stepperStateText0, stepperStateText1, stepperStateText2, stepperStateText3, stepperStateText4, stepperStateText5};
 
 //	Encodeur
 RotationSensor encoder(rxPin, txPin, traceDebug);					// Encoder class
@@ -172,6 +174,7 @@ void dumpSettings(void) {
 	printInfo("encoderOffsetAngle = %.2f\n", encoderOffsetAngle);
 	printInfo("clockwiseIncrement = %s\n", clockwiseIncrement ? "true" : "false");
 	printInfo("imageOffsetAngle = %.2f\n", imageOffsetAngle);
+	printInfo("enableCircles = %s\n", enableCircles ? "true" : "false");
 	printInfo("slaveId = %d\n", slaveId);
 	printInfo("regId = %d\n", regId);
 	printInfo("radius = %f\n", radius);
@@ -247,6 +250,7 @@ bool readSettings(void) {
 	pwd = settings["pwd"].as<String>();
 	espName = settings["name"].as<String>();
 	enableSound = settings["enableSound"].as<bool>();
+	enableCircles = settings["enableCircles"].as<bool>();
 	soundVolume = settings["soundVolume"].as<uint8_t>();
 	beforeSoundIndex = settings["beforeSoundIndex"].as<uint16_t>();
 	beforeSoundDuration = settings["beforeSoundDuration"].as<float>();
@@ -465,7 +469,7 @@ void settingsReceived(AsyncWebServerRequest *request) {
 void debugReceived(AsyncWebServerRequest *request) {
 	// Send a json document with interresting variables
 	JsonDocument answer;
-	char text[50];
+	char text[30];
 	answer["lastAngleSent"] = lastAngleSent;
 	answer["currentAngle"] = currentAngle;
 	answer["requiredAngle"] = requiredAngle;
@@ -507,27 +511,13 @@ void statusReceived(AsyncWebServerRequest *request) {
 		}
 	}
 	JsonDocument answer;
-	switch (rotationState) {
-		case stepperStopped:
-			answer["rotationState"] = "stopped";
-			break;
-		case stepperStarting:
-			answer["rotationState"] = "starting";
-			break;
-		case stepperRunning:
-			answer["rotationState"] = "running";
-			break;
-		case stepperStopping:
-			answer["rotationState"] = "stopping";
-			break;
-		case stepperFixing:
-			answer["rotationState"] = "fixing";
-			break;
-		default:
-			char msg[50];
-			snprintf(msg, sizeof(msg),"unknown (%d)", rotationState);
-			answer["rotationState"] = msg;
+	char text[30];
+	if (rotationState < 0 || rotationState >= sizeof(stepperStateTable)) {
+		snprintf_P(text, sizeof(text), PSTR("??? %d ???"), rotationState);
+	} else {
+		strncpy_P(text, (char *)pgm_read_ptr(&(stepperStateTable[rotationState])), sizeof(text));
 	}
+	answer["rotationState"] = text;
 	answer["currentAngle"] = currentAngle;
 	answer["requiredAngle"] = requiredAngle;
 	answer["closestTrack"] = closestTrack;
@@ -600,7 +590,7 @@ void moveReceived(AsyncWebServerRequest *request) {
 		snprintf(msg, sizeof(msg),"<status>Ok, moving %d micro steps</status>", count);
 		request->send_P(200, "", msg);
 	}
-	char msg[50];											// Buffer for message
+	char msg[70];											// Buffer for message
 	snprintf(msg, sizeof(msg),"<status>Can't understand %s</status>", request->url().c_str());
 	request->send_P(400, "", msg);
 }
@@ -636,8 +626,8 @@ void gotoReceived(AsyncWebServerRequest *request) {
 			request->send_P(200, "", msg);
 			return;
 		}
-		char msg[50];											// Buffer for message
-		snprintf(msg, sizeof(msg),"<status>Bad track number %d, should be 1-%d", track, trackCount);
+		char msg[70];											// Buffer for message
+		snprintf(msg, sizeof(msg),"<status>Bad track number %d, should be 1-%d</status>", track, trackCount);
 		request->send_P(400, "", msg);
 		return;
 	}
@@ -669,13 +659,91 @@ void setAngleReceived(AsyncWebServerRequest *request) {
 				request->send_P(200, "", "<status>Ok</status>");
 				return;
 			}
-			char msg[50];											// Buffer for message
-			snprintf(msg, sizeof(msg),"<status>Bad track number %d, should be 1-%d", track, trackCount);
+			char msg[70];											// Buffer for message
+			snprintf(msg, sizeof(msg),"<status>Bad track number %d, should be 1-%d</status>", track, trackCount);
 			request->send_P(400, "", msg);
 			return;
 		}
 	}
+	char msg[70];											// Buffer for message
+	snprintf(msg, sizeof(msg),"<status>Can't understand %s</status>", request->url().c_str());
+	request->send_P(400, "", msg);
+}
+
+// Called when /setangle/<track number> is received
+void testSoundReceived(AsyncWebServerRequest *request) {
+	String position = request->url().substring(1);
+	if (traceCode) {
+		printInfo("Received %s\n", position.c_str());
+	}
+	int separator1 = position.indexOf("/");							// Position of first "/"
+	if (separator1 >= 0) {
+		// Extract index number
+		int8_t index = position.substring(separator1+1).toInt();
+		if (rotationState == stepperStopped) {
+			if (enableSound) {
+				if (index == 1) {											// Index = 1
+					if (beforeSoundIndex) {
+						rotationState = testingSound;						// Set to starting
+						playerDuration = beforeSoundDuration * 1000;		// Convert duration to ms
+						playIndex(beforeSoundIndex);						// Play sound
+						request->send_P(200, "", "<status>Ok</status>");
+					} else {
+						char msg[50];										// Buffer for message
+						snprintf(msg, sizeof(msg),"<status>Before sound index not defined</status>");
+						request->send_P(400, "", msg);
+						return;
+					}
+				} else if (index == 2) {									// Index = 2
+					if (moveSoundIndex) {
+						rotationState = testingSound;						// Set to starting
+						playerDuration = 5 * 1000;							// Convert duration to ms
+						playIndex(moveSoundIndex);							// Play sound
+						request->send_P(200, "", "<status>Ok</status>");
+					} else {
+						char msg[50];										// Buffer for message
+						snprintf(msg, sizeof(msg),"<status>Moving sound index not defined</status>");
+						request->send_P(400, "", msg);
+						return;
+					}
+				} else if (index == 3) {									// Index = 3
+					if (afterSoundIndex) {
+						rotationState = testingSound;						// Set to starting
+						playerDuration = afterSoundDuration * 1000;			// Convert duration to ms
+						playIndex(afterSoundIndex);							// Play sound
+						request->send_P(200, "", "<status>Ok</status>");
+					} else {
+			char msg[50];											// Buffer for message
+						snprintf(msg, sizeof(msg),"<status>After sound index not defined</status>");
+			request->send_P(400, "", msg);
+			return;
+		}
+				} else {
+					char msg[70];											// Buffer for message
+					snprintf(msg, sizeof(msg),"<status>Bad index number %d, should be 1-3</status>", index);
+					request->send_P(400, "", msg);
+					return;
+	}
+			} else {
 	char msg[50];											// Buffer for message
+				snprintf(msg, sizeof(msg),"<status>Sound disabled</status>");
+				request->send_P(400, "", msg);
+				return;
+			}
+		} else {
+			char text[30];
+			if (rotationState < 0 || rotationState >= sizeof(stepperStateTable)) {
+				snprintf_P(text, sizeof(text), PSTR("??? %d ???"), rotationState);
+			} else {
+				strncpy_P(text, (char *)pgm_read_ptr(&(stepperStateTable[rotationState])), sizeof(text));
+			}
+			char msg[80];													// Buffer for message
+			snprintf(msg, sizeof(msg),"<status>Stepper not stopped but %s</status>", text);
+			request->send_P(400, "", msg);
+			return;
+		}
+	}
+	char msg[70];															// Buffer for message
 	snprintf(msg, sizeof(msg),"<status>Can't understand %s</status>", request->url().c_str());
 	request->send_P(400, "", msg);
 }
@@ -752,8 +820,8 @@ void setChangedReceived(AsyncWebServerRequest *request) {
 			} else {
 				// This is not a known field
 				printError("Can't set field %s\n", fieldName.c_str());
-				char msg[50];											// Buffer for message
-				snprintf(msg, sizeof(msg),"<status>Bad field name %s", fieldName.c_str());
+				char msg[70];											// Buffer for message
+				snprintf(msg, sizeof(msg),"<status>Bad field name %s</status>", fieldName.c_str());
 				request->send_P(400, "", msg);
 				return;
 			}
@@ -765,7 +833,7 @@ void setChangedReceived(AsyncWebServerRequest *request) {
 
 // Sends a 404 error with requested file name
 void send404Error(AsyncWebServerRequest *request) {
-	char msg[50];
+	char msg[70];
 	snprintf_P(msg, sizeof(msg), PSTR("File %s not found"), request->url().c_str());
 	request->send(404, "text/plain", msg);
 	if (traceCode) {
@@ -906,6 +974,7 @@ void setup() {
     webServer.on("/imgref", HTTP_GET, imgRefReceived);				// /imgref request
     webServer.on("/changed", HTTP_GET, setChangedReceived);			// /changed request
     webServer.on("/setangle", HTTP_GET, setAngleReceived);			// /setangle request
+    webServer.on("/tstsnd", HTTP_GET, testSoundReceived);			// /setangle request
 	webServer.addHandler(&events);									// Define web events
 	webServer.addHandler(new LittleFSEditor());						// Define file system editor
 	webServer.onNotFound (notFound);								// To be called when URL is not known
@@ -975,6 +1044,11 @@ void loop() {
 	} else if (rotationState == stepperStopped) {					// Are we stopped?
 		if (adjustPosition) {										// Is Position fixing enabled
 			fixPosition();											// Fix position
+		}
+	} else if (rotationState == testingSound) {						// Are we testing sound?
+		if ((millis() - playerStartedTime) > playerDuration) {		// Do we exhaust playing time?
+			playStop();												// Stop playing sound
+			rotationState = stepperStopped;							// We're now stopped
 		}
 	}
 

@@ -149,28 +149,38 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir l
 #### Define sensitive zones parameters/Définir les paramètres des zones sensibles
   - Sensitive zones radius: Give sensitive zones radius, in image percentage. 0% maps centers, 50% image width.
   - Sensitive zones width: Give sensitive zone width, in image percentage. Value like 4 are common.
+  - Show track number in circle: display track number in circle in normal (/) view, always displayed in (/setup)
 
   - Rayon des zones sensibles : Indique le rayon des zones sensibles , en % de l'image. 0% correspond au centre, 50% à la largeur de l'image.
   - Largeur des zones sensibles : Indique la largeur de la zone sensible, en % de l'image. Des valeurs autour de 4 sont courantes.
+  - Afficher le muméro de voie dans un rond : ne concerne que la vue normale (/), toujours affiché dans (/setup) 
 
 #### Define MP3 reader parameters/Définir les paramètres du module MP3
   - Activate sound: Tick to activate sound globally.
   - Sound volume: Give desired sound level (between 0 and 30).
   - Before rotation sound index: MP3 index to play before rotation. Set to zero if not used.
   - Before rotation sound duration (s): Duration (in seconds) of before rotation sound.
+  - Test before rotation sound: play sound specified in "Before rotation sound index" for "Before rotation sound duration" seconds.
   - During rotation sound index: MP3 index to play during rotation. Set to zero if not used.
+  - Test during rotation sound: play sound specified in "During rotation sound index" for 5 seconds.
   - After rotation sound index: MP3 index to play after rotation. Set to zero if not used.
   - After rotation sound duration (s): Duration (in seconds) of after rotation sound.
+  - Test after rotation sound: play sound specified in "After rotation sound index" for "After rotation sound duration" seconds.
+
 Note: MP3 files should be written in /MP3 folder on SD card. Filenames should be from 0001.mp3 to 9999.mp3
 
   - Activer le son : Cocher pour activer le son globalement.
   - Volume sonore : Indiquer le volume sonore désiré (entre 0 et 30).
   - Index son avant rotation : Index du MP3 à lire avant la rotation. Mettre à zéro si non utilisé.
   - Durée son avant rotation (s) : Durée (en secondes) de lecture du son avant la rotation.
+  - Tester le son avant roration : jour le son spécifié dans "Index son avant rotation" pendant "Durée son avant rotation" secondes.
   - Index son pendant rotation : Index du MP3 à lire pendant la rotation. Mettre à zéro si non utilisé.
+  - Tester le son pendant roration : jour le son spécifié dans "Index son pendant rotation" pendant 5 secondes.
   - Index son après rotation : Index du MP3 à lire avant la rotation. Mettre à zéro si non utilisé.
   - Durée son après rotation (s) : Durée (en secondes) de lecture du son après la rotation.
-Note: Les fichiers MP3 doivent être écrits dans le répertoire /MP3 de la carte SD. LEs noms doivent être entre 0001.mp3 et 9999.mp3.
+  - Tester le son après roration : jour le son spécifié dans "Index son après rotation" pendant "Durée son après rotation" secondes.
+
+Note: Les fichiers MP3 doivent être écrits dans le répertoire /MP3 de la carte SD. Les noms doivent être compris entre 0001.mp3 et 9999.mp3.
 
 #### Define network parameters/Définir les paramètres réseau
   - Wifi SSID: Give Wifi existing SSId to use. If empty a "PontTournant_XXXXXX" private access point will be created.
@@ -243,6 +253,7 @@ Copier les 2 fichier dans le répertoire data, et le charger dans la flash de l'
   - /setup : display setup page/affiche la page de configuration
   - /edit : manage and edit flie system/gère et édite le système de fichier
   - /settings : returns settings in JSON format/Retourne la configuration au format JSON
+  - /tstsnd/<x> : play sound, 1 being before rotation, 2 during rotation and 3 after rotation/Jour le son, 1 étant avant rotation, 2 pendant rotation et 3 après rotation.
   - /debug : display internal variables to debug/Affiche les variables internes pour déverminer
   
 ## Backups/Sauvegardes
