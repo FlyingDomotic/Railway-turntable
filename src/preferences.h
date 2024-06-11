@@ -35,3 +35,7 @@ uint16_t afterSoundIndex = 0;           // After move sound index
 float afterSoundDuration = 0.0;         // After move sound duration
 #define POSITION_COUNT 36               // Maximum number of tracks
 float indexes[POSITION_COUNT+1];        // Angles of each index
+float inertiaFactorStarting = 1.0;		// Divide speed by this number when starting
+float inertiaAngleStarting = 0;			// Increase speed over this angle when starting
+float inertiaFactorStopping = 0.1;		// Divide speed up to this number when stopping
+float inertiaAngleStopping = 0;			// Start decreasing speed at this angle before target when stopping

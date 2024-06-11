@@ -101,6 +101,15 @@ float lastAngleSent = 0;											// Last sent angle
 float currentAngle = 0;												// Current angle
 float requiredAngle = -1;											// Required angle
 unsigned long microStepsToGo = 0;									// Remaining micro steps to send
+uint16_t inertiaStepsStarting = 0;									// Number of steps corresponding to inertiaAngleStarting
+uint16_t inertiaEndStarting = 0;									// Number of step of end of starting steps (total steps - inertiaStepsStarting)
+float normalStepDuration = 0.0;										// Normal (full speed) step duration
+float currentStepDuration = 0.0;									// Current (variable) step duration
+float inertiaInitialStepDuration = 0.0;								// Duration of step when starting
+float inertiaDurationDecrement = 0.0;								// Step duration decrement to add each steps when starting
+uint16_t inertiaStepsStopping = 0;									// Number of steps correspinding to inertiaAngleStopping
+float inertiaDurationIncrement = 0.0;								// Step duration increment to add each steps when stopping
+float inertiaFinalStepDuration = 0.0;								// Duration of step when stopping (will also be used to fix position)
 enum stepperState {													// Rotation states
 	stepperStopped,
 	stepperStarting,
@@ -169,7 +178,10 @@ void dumpSettings(void) {
 	printInfo("invertStepper = %s\n", invertStepper ? "false" : "true");
 	printInfo("stepperReduction = %.2f\n", stepperReduction);
 	printInfo("driverMinimalMicroSec = %d\n", driverMinimalMicroSec);
-	printInfo("requiredRPM = %.2f\n", requiredRPM);
+	printInfo("inertiaAngleStarting = %.2f\n", inertiaAngleStarting);
+	printInfo("inertiaAngleStopping = %.2f\n", inertiaAngleStopping);
+	printInfo("inertiaFactorStarting = %.2f\n", inertiaFactorStarting);
+	printInfo("inertiaFactorStopping = %.2f\n", inertiaFactorStopping);
 	printInfo("maxDelta = %d\n", maxDelta);
 	printInfo("encoderOffsetAngle = %.2f\n", encoderOffsetAngle);
 	printInfo("clockwiseIncrement = %s\n", clockwiseIncrement ? "true" : "false");
@@ -233,6 +245,22 @@ bool readSettings(void) {
 	if (requiredRPM <= 0.0) {
 		printError("requiredRPM is %f, should be > 0\n", requiredRPM);
 	}
+	inertiaAngleStarting = settings["inertiaAngleStarting"].as<float>();
+	if (inertiaAngleStarting < 0.0) {
+		printError("inertiaAngleStarting is %f, should be >= 0\n", inertiaAngleStarting);
+	}
+	inertiaAngleStopping = settings["inertiaAngleStopping"].as<float>();
+	if (inertiaAngleStopping < 0.0) {
+		printError("inertiaAngleStopping is %f, should be >= 0\n", inertiaAngleStopping);
+	}
+	inertiaFactorStarting = settings["inertiaFactorStarting"].as<float>();
+	if (inertiaFactorStarting < 1.0) {
+		printError("inertiaFactorStarting is %f, should be >= 1\n", inertiaFactorStarting);
+	}
+	inertiaFactorStopping = settings["inertiaFactorStopping"].as<float>();
+	if (inertiaFactorStopping < 1.0) {
+		printError("inertiaFactorStopping is %f, should be >= 1\n", inertiaFactorStopping);
+	}
 	maxDelta = settings["maxDelta"].as<uint8_t>();
 	enableEncoder = settings["enableEncoder"].as<bool>();
 	adjustPosition = settings["adjustPosition"].as<bool>();
@@ -287,6 +315,10 @@ void writeSettings(void) {
 	settings["invertStepper"] = invertStepper;
 	settings["stepperReduction"] = stepperReduction;
 	settings["requiredRPM"] = requiredRPM;
+	settings["inertiaAngleStarting"] = inertiaAngleStarting;
+	settings["inertiaAngleStopping"] = inertiaAngleStopping;
+	settings["inertiaFactorStarting"] = inertiaFactorStarting;
+	settings["inertiaFactorStopping"] = inertiaFactorStopping;
 	settings["maxDelta"] = maxDelta;
 	settings["enableEncoder"] = enableEncoder;
 	settings["adjustPosition"] = adjustPosition;
@@ -354,6 +386,7 @@ Modbus::ResultCode modbusCb(Modbus::ResultCode event, uint16_t transactionId, vo
 void startRotation(void) {
 	digitalWrite(runPin, HIGH);										// Set rotation pin to high
 	if (rotationState == stepperStopped) {							// Are we stopped?
+		currentStepDuration = inertiaInitialStepDuration;			// Set initial step duration
 		rotationState = stepperRunning;								// Set to running by default
 		if (beforeSoundIndex) {										// Do we have a starting sound?
 			rotationState = stepperStarting;						// Set to starting
@@ -397,6 +430,7 @@ void moveToTrack(uint8_t index) {
 	if (deltaAngle < -180.0) {
 		deltaAngle += 360.0;
 	}
+	computeInertia();												// Compute inertia parameters
 	microStepsToGo = stepper.microStepsForAngle(deltaAngle);		// Compute micro steps to move
 	if (microStepsToGo) {											// Do we have to move?
 		startRotation();											// Start rotation phase
@@ -409,7 +443,7 @@ void moveToTrack(uint8_t index) {
 // Ajdust stepper position if required (to be called when stepper is not running, after currentAngle set by encoder)
 void fixPosition(void){
 	if (adjustPosition && rotationState == stepperStopped) {		// Only if position adjustment is required and stepper stopped
-		if (requiredAngle != -1) {									// Don't adjust position after manual move (no resuired angle)
+		if (requiredAngle != -1) {									// Don't adjust position after manual move (no required angle)
 			float deltaAngle = requiredAngle - currentAngle;		// Difference to move
 			if (deltaAngle > 180.0) {								// Set angle into -180/+180 range
 				deltaAngle -= 360.0;
@@ -425,6 +459,36 @@ void fixPosition(void){
 				}
 			}
 		}
+	}
+}
+
+void computeInertia() {
+	inertiaStepsStarting = 0;									// Number of steps corresponding to inertiaAngleStarting
+	inertiaInitialStepDuration = 0.0;							// Duration of step when starting
+	inertiaDurationDecrement = 0.0;								// Step duration decrement to add each steps when starting
+	inertiaStepsStopping = 0;									// Number of steps correspinding to inertiaAngleStopping
+	inertiaDurationIncrement = 0.0;								// Step duration increment to add each steps when stopping
+	inertiaFinalStepDuration = 0.0;								// Duration of step when stopping (will also be used to fix position)
+
+	normalStepDuration = stepper.getStepDuration();				// Get step duration
+	
+	if (inertiaAngleStarting > 0.0 && inertiaFactorStarting > 1.0) {										// Do we have to add starting inertia?
+		inertiaStepsStarting = stepper.microStepsForAngle(inertiaAngleStarting);							// Number of steps to turn of starting angle
+		inertiaInitialStepDuration = normalStepDuration * inertiaFactorStarting;							// Step duration at startup
+		inertiaDurationDecrement = (inertiaInitialStepDuration - normalStepDuration) / inertiaStepsStarting;//Decrement of duration of each step when starting
+	}
+
+	if (inertiaAngleStopping > 0.0 && inertiaFactorStopping > 1.0) {										// Do we have to add stopping inertia?
+		inertiaStepsStopping = stepper.microStepsForAngle(inertiaAngleStopping);							// Number of steps to turn of stopping angle
+		inertiaFinalStepDuration = normalStepDuration * inertiaFactorStopping;								// Step duration at startup
+		inertiaDurationIncrement = (inertiaFinalStepDuration - normalStepDuration) / inertiaStepsStopping;	//Increment of duration of each step when stopping
+	}
+
+	if (traceCode) {
+		printInfo("Steps %.2f ms, %d starting from %.2f ms by %.2f ms, %d stopping up to %.2f ms by %.2f ms\n",
+			normalStepDuration * 1000.0,
+			inertiaStepsStarting, inertiaInitialStepDuration * 1000.0, inertiaDurationDecrement * 1000.0,
+			inertiaStepsStopping, inertiaFinalStepDuration * 1000.0, inertiaDurationIncrement * 1000.0);
 	}
 }
 
@@ -585,6 +649,9 @@ void moveReceived(AsyncWebServerRequest *request) {
 		stepper.setDirection(count);
 		microStepsToGo = abs(count);
 		requiredAngle = -1;
+		currentStepDuration = normalStepDuration;
+		inertiaEndStarting = count + 1;
+		inertiaEndStarting = 0;
 		startRotation();
 		char msg[50];											// Buffer for message
 		snprintf(msg, sizeof(msg),"<status>Ok, moving %d micro steps</status>", count);
@@ -779,6 +846,14 @@ void setChangedReceived(AsyncWebServerRequest *request) {
 				driverMinimalMicroSec = fieldValue.toInt();
 			} else if (fieldName == "requiredRPM") {
 				requiredRPM = fieldValue.toFloat();
+			} else if (fieldName == "inertiaAngleStarting") {
+				inertiaAngleStarting = fieldValue.toFloat();
+			} else if (fieldName == "inertiaAngleStopping") {
+				inertiaAngleStopping = fieldValue.toFloat();
+			} else if (fieldName == "inertiaFactorStarting") {
+				inertiaFactorStarting = fieldValue.toFloat();
+			} else if (fieldName == "inertiaFactorStopping") {
+				inertiaFactorStopping = fieldValue.toFloat();
 			} else if (fieldName == "slaveId") {
 				slaveId = fieldValue.toInt();
 			} else if (fieldName == "regId") {
@@ -1009,11 +1084,20 @@ void setup() {
 void loop() {
 	// Manage stepper rotation
 	if (rotationState == stepperRunning) {							// Are we rotating?
-		stepper.turnOneMicroStep();									// Turn one micro step
+		stepper.turnOneMicroStep(currentStepDuration);				// Turn one micro step
 		currentAngle = encoder.floatModuloPositive(					// Make result in range 0-360
 			currentAngle + stepper.anglePerMicroStep()				// Update current angle
 			, 360.0);
 		microStepsToGo--;											// Remove one micro step
+		if (requiredAngle) {										// Are we in track move (instead of step move)
+			if (microStepsToGo > inertiaEndStarting) {				// Are we in initial rotation?
+				currentStepDuration -= inertiaDurationDecrement;	// Decrement duration
+			} else if (microStepsToGo <= inertiaStepsStopping) {	// Are we in slowing down roration?
+				currentStepDuration += inertiaDurationIncrement;	// Increment duration
+			} else {												// We are in full speed part
+				currentStepDuration = normalStepDuration;			// Set normal duration
+			}
+		}
 		if (!microStepsToGo) {										// Do we end rotation?
 			stopRotation();											// Stop rotation
 		}
@@ -1033,7 +1117,7 @@ void loop() {
 			digitalWrite(runPin, LOW);								// Set rotation pin to low
 		}
 	} else if (rotationState == stepperFixing) {					// Are we fixing?
-		stepper.turnOneMicroStep();									// Turn one micro step
+		stepper.turnOneMicroStep(inertiaFinalStepDuration);			// Turn one micro step at slow speed
 		currentAngle = encoder.floatModuloPositive(					// Make result in range 0-360
 			currentAngle + stepper.anglePerMicroStep()				// Update current angle
 			, 360.0);
@@ -1067,7 +1151,7 @@ void loop() {
 					}
 				}
 
-	if ((millis() - resultValueTime) > 500) {						// Last result sent more than 0.5 seconds?
+	if ((millis() - resultValueTime) > 1000) {						// Last result sent more than 1 second?
 				if (abs(currentAngle - lastAngleSent) >= MIN_DELTA_ANGLE) {	// Send message only if there's a slight difference
 			if (traceCode) {
 				printInfo("Angle: %f\n", currentAngle);

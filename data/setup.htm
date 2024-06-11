@@ -98,6 +98,10 @@
 			<label data-i18n-key="stepperReduction">Stepper reduction factor:</label>&nbsp;<input type="number" id="stepperReduction" min="0" max="1" style="width:60px" onchange="changed(this);"><br>
 			<label data-i18n-key="driverMinimalMicroSec">Delay between commands (µs):</label>&nbsp;<input type="number" id="driverMinimalMicroSec" min="1" max="100" style="width:60px" onchange="changed(this);"><br>
 			<label data-i18n-key="requiredRPM">Turntable RPM:</label>&nbsp;<input type="number" id="requiredRPM" min="0" max="6" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="inertiaFactorStarting">Inertia factor when starting:</label>&nbsp;<input type="number" id="inertiaFactorStarting" min="1" max="10" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="inertiaAngleStarting">Angle before full speed:</label>&nbsp;<input type="number" id="inertiaAngleStarting" min="0.1" max="10" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="inertiaFactorStopping">Inertia factor when starting:</label>&nbsp;<input type="number" id="inertiaFactorStopping" min="1" max="10" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="inertiaAngleStopping">Angle before slowing down:</label>&nbsp;<input type="number" id="inertiaAngleStopping" min="0.1" max="10" style="width:60px" onchange="changed(this);"><br>
 			<label data-i18n-key="invertStepper">Invert stepper rotation</label>&nbsp;<input type="checkbox" id="invertStepper" onchange="changed(this);"><br>
 			<label data-i18n-key="adjustPosition">Adjust position</label>&nbsp;<input type="checkbox" id="adjustPosition" onchange="changed(this);"><br>
 			<hr />

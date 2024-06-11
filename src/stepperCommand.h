@@ -14,7 +14,8 @@
 				unsigned long microStepsForAngle(float _angle);
 				float anglePerMicroStep(void);
 				uint8_t getDirection(void);
-				void turnOneMicroStep(void);
+				void turnOneMicroStep(float requiredDuration = 0.0);
+				float getStepDuration(void);
 
 			private:
 				float degreesPerStep;						// Motor's number of degrees per step

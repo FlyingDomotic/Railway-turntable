@@ -88,7 +88,7 @@ unsigned long StepperCommand::microStepsForAngle(float _angle){
   unsigned long microSteps = (abs(_angle) + (abs(anglePerMicroStep()) / 2.0)) * microStepsPerStep * stepperReduction / degreesPerStep;
   if (microSteps) {
     if (traceDebug) {
-        Serial.printf("Stepper needs %ld micro-steps of %.3f ms to turn about %f° in %f s\n", microSteps, stepDuration * 1000.0, _angle, microSteps * stepDuration);
+			Serial.printf("Stepper needs %ld micro-steps of %.2f ms to turn about %.2f° in %.2f s\n", microSteps, stepDuration * 1000.0, _angle, microSteps * stepDuration);
     }
     // Set correct direction
     if (_angle < 0.0) {
@@ -123,9 +123,17 @@ uint8_t StepperCommand::getDirection(void) {
 }
 
 //  Turns stepper one micro step
-void StepperCommand::turnOneMicroStep(void){
+void StepperCommand::turnOneMicroStep(float requiredDuration){
+	float duration = requiredDuration;
+	if (duration <= 0.0) {
+		duration = stepDuration	;
+	}
   digitalWrite(pulsePin, 1);
-  delay(stepDuration * 1E3 / 2.0);
+	delay(duration * 1E3 / 2.0);
   digitalWrite(pulsePin, 0);
-  delay(stepDuration * 1E3 / 2.0);
+	delay(duration * 1E3 / 2.0);
+}
+
+float StepperCommand::getStepDuration(void) {
+	return stepDuration;
 }

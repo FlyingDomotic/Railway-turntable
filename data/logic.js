@@ -287,7 +287,6 @@ function turn(angle) {
     ctx.translate(-(ctx.canvas.width/2), -(ctx.canvas.height/2));// Come back to origin and draw image
     ctx.drawImage(img2, canvas.width/2 - img2.width/2, canvas.height/2 -img2.height/2, img2.width, img2.height);
     ctx.restore();                                              // Restore context
-	console.log("enableCircles: "+enableCircles);
 	if (inSetup || enableCircles) {								// If in setup or enableCircle is true
         drawCircles();                                          // Display circles
     }

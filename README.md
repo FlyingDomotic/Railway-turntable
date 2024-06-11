@@ -48,11 +48,15 @@ An optional optocoupler is also available to connect a LED to signal turntable r
 
 An optional MP3 reader, based on DFPlayer Mini MP3 Player chip. It will allow to play a start sound during a settable time, a rotation sound, as long as turntable turns, and a stop sound during a settable time (all optional).
 
+To make turntable more realistic, inertia is simulated when starting rotation and/or ending it.
+
 La connexion entre l'ESP et le capteur de rotation est réalisée par un module RS485/TTL simple. Une petite interface à base d'opto coupleurs 4N25, avec une résistance de limitation côté LED, a été réalisée pour connecter le DM556 alimenté en 24V, alors que l'ESP est en 3,3V.
 
 Un opto coupleur est également disponible pour connecter une LED de rotation (optionnel).
 
 Un lecteur MP3, basé sur un chip DFPlayer Mini MP3 Player peut également être ajouté (optionnel). Il permet de jouer un son de démarrage pendant une durée paramétrable, un son de rotation tant que le pont tourne, et un son d'arrêt pendant une durée paramétrable (tous optionnels).
+
+Pour rendre le pont tournant plus réaliste, une inertie est simulée lorsqu'on démarre et arrête le pont.
 
 ## Network/Réseau
 
@@ -122,7 +126,10 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir l
   - Stepper reduction factor: Number of rotation of stepper for one rotation of turntable (1.0 if no reduction, 3.0 if 3 stepper steps are needed to get one turntable step).
   - Delay between commands (µs): Give minimal delay between 2 commands. Given in driver's doc.
   - Turntable RPM: Give desired turntable rotation speed. Often, between 1 and 2 RPM.
-  - Invert stepper rotation: tick to invert stepper rotation ;-)
+	- Inertia factor when starting: start rotation with speed equal to RPM divided by this number when simulating inertia. Set to 1 to ignore starting inertia.
+	- Angle before full speed: angle, in degree, to accellerate from initial speed to normal RPM. Set to zero to ignore starting inertia.
+	- Inertia factor when stopping: end rotation with speed equal to RPM divided by this number when simulating inertia. Set to 1 to ignore stopping inertia.
+	- Angle before slowing down: angle, in degree, to deccellerate from normal RPM to ending speed. Set to zero to ignore ending inertia.
   - Adjust position: permanently read turntable position and realign it with required angle when selected.
 
   - Degrés par pas : Indiquer le nombre de degrés correspondant à 1 pas. Par exemple, un moteur avec 200 pas par tour fera 200/360 = 1,8° par pas.
@@ -130,6 +137,10 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir l
   - Réduction moteur : nombre de tours du moteur pour un tour du pont (1.0 s'il n'y a pas de réducteur, 3.0 si 3 pas du moteur sont nécessaires pour avoir un pas sur le pont).
   - Délai entre commandes (µs) : Indiquer le délai minimum entre 2 envois de commandes. Indiqué dans la doc du driver.
   - Tours par minute du pont : Indiquer la vitesse de rotation souhaitée du pont. En général, entre 1 et 2 tours par minute.
+	- Facteur inertiel au démarrage : démarre la rotation avec une vitesse égale à la vitesse du pont divisée par ce nombre. Mettre à 1 pour ignorer l'inertie au démarrage.
+	- Angle avant pleine vitesse : angle, en degrés, pour accélérer de la vitesse de démarrage à la vitesse normale. Mettre à 0 pour ignorer l'inertie au démarrage.
+	- Facteur inertiel à l'arrêt : termine la rotation avec une vitesse égale à la vitesse du pont divisée par ce nombre. Mettre à 1 pour ignorer l'inertie à l'arrêt.
+	- Angle avant ralentissement : angle, en degrés, pour freiner de la vitesse normale à la vitesse d'arrêt. Mettre à 0 pour ignorer l'inertie au démarrage.
   - Inverser le sens du moteur : cocher pour inverser le sens de rotation fu moteur ;-)
   - Ajuster la position : lit en permanence la position du pont et la réaligne avec l'angle demandé si coché.
 
