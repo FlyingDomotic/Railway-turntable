@@ -2,11 +2,11 @@
 
 [English version and French version in the same document]
 
-Controls a railway turntable with an ESP8266, a stepper, rotation sensor through a web interface
+Controls a railway turntable with an ESP8266, a stepper, rotation sensor through a web interface (fully asynchronous)
 
 [ Versions françaises et anglaises dans le même document]
 
-Contrôle un pont tournant ferroviaire au travers d'un ESP8266, avec un moteur pas à pas, un capteur de rotation, via une interface Web
+Contrôle un pont tournant ferroviaire au travers d'un ESP8266, avec un moteur pas à pas, un capteur de rotation, via une interface Web (complètement asynchrone)
 
 ## What's for?/A quoi ça sert ?
 

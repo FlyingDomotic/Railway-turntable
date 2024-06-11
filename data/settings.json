@@ -7,7 +7,7 @@
   "driverMinimalMicroSec": 3,
   "invertStepper": false,
   "stepperReduction": 4,
-  "requiredRPM": 3,
+  "requiredRPM": 1,
   "inertiaFactorStarting": 3.0,
   "inertiaAngleStarting": 2.0,
   "inertiaFactorStopping": 5.0,

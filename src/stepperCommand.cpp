@@ -34,14 +34,14 @@ void StepperCommand::setParams(float _degreesPerStep, uint16_t _microStepsPerSte
   traceDebug = _traceDebug;                        // Trace debug messages?
 
   // Compute steps needed to make 1 full turn
-  float stepsPerRotation = 360.0 * microStepsPerStep / degreesPerStep;
+	float stepsPerRotation = 360.0 * microStepsPerStep * stepperReduction / degreesPerStep;
   // Compute 1 step duration (in seconds)
   float oneStepDuration = 60 / (_RPM * stepsPerRotation);
   // Check for driver's minimum duration
-  if ((oneStepDuration / 2.0) > (driverMinimalMicroSec * 1E6)) {
-      Serial.print("*** Step duration is too low, set to minimum ***");
+	if ((oneStepDuration / 2.0) < (driverMinimalMicroSec * 1E-6)) {
+		Serial.printf("*** Step duration %f s is too low, set to minimum of %d us***\n", oneStepDuration, driverMinimalMicroSec*2);
       // Force step duration
-      oneStepDuration = driverMinimalMicroSec * 2;
+		oneStepDuration = driverMinimalMicroSec * 2 * 1E-6;
   }
   stepDuration = oneStepDuration;
   if (traceDebug) {
@@ -53,10 +53,10 @@ void StepperCommand::setParams(float _degreesPerStep, uint16_t _microStepsPerSte
 void StepperCommand::begin(){
   if (enablePin != -1) {
     pinMode(enablePin, OUTPUT);
-    digitalWrite(enablePin, 0);
+		digitalWrite(enablePin, LOW);
     delayMicroseconds(driverMinimalMicroSec);
   }
-  digitalWrite(pulsePin, 0);
+	digitalWrite(pulsePin, LOW);
   pinMode(pulsePin, OUTPUT);
   setDirection(1);
   pinMode(directionPin, OUTPUT);
@@ -70,9 +70,9 @@ void StepperCommand::rotateAngle(float _angle){
   
   // Rotate stepper the right number of micro-steps
   for (unsigned long i=0; i < microSteps; i++){
-    digitalWrite(pulsePin, 1);
+		digitalWrite(pulsePin, HIGH);
     delay(stepDuration * 1E3 / 2.0);
-    digitalWrite(pulsePin, 0);
+		digitalWrite(pulsePin, LOW);
     delay(stepDuration * 1E3 / 2.0);
   }
 }
@@ -109,10 +109,10 @@ float StepperCommand::anglePerMicroStep(void){
 void StepperCommand::setDirection(int16_t direction) {
   if (direction < 0 ) {
     currentDirection = -1;
-    digitalWrite(directionPin, invertStepper ? 0 : 1);
+		digitalWrite(directionPin, invertStepper ? LOW : HIGH);
   } else {
     currentDirection = 1;
-    digitalWrite(directionPin, invertStepper ? 1 : 0);
+		digitalWrite(directionPin, invertStepper ? HIGH : LOW);
   }
   delayMicroseconds(driverMinimalMicroSec);
 }
@@ -124,16 +124,33 @@ uint8_t StepperCommand::getDirection(void) {
 
 //  Turns stepper one micro step
 void StepperCommand::turnOneMicroStep(float requiredDuration){
-	float duration = requiredDuration;
-	if (duration <= 0.0) {
-		duration = stepDuration	;
+	halfStepDurationUs = requiredDuration * 1E6 * 0.5;
+	if (halfStepDurationUs <= driverMinimalMicroSec) {
+		halfStepDurationUs = driverMinimalMicroSec * 2;
 	}
-  digitalWrite(pulsePin, 1);
-	delay(duration * 1E3 / 2.0);
-  digitalWrite(pulsePin, 0);
-	delay(duration * 1E3 / 2.0);
+	stepperPhase = phaseUp;
+	lastPhaseStartUs = micros();
+	digitalWrite(pulsePin, HIGH);
 }
 
 float StepperCommand::getStepDuration(void) {
 	return stepDuration;
+}
+
+// Do stepper loop (called regularly by main loop)
+StepperCommand::stepperPhases StepperCommand::stepperLoop() {
+	unsigned long nowUs = micros();															// Get current time (us)
+	if (stepperPhase == phaseEnd) {															// Phase end?
+		stepperPhase = phaseIdle;															// Set to idle			
+	}
+	if (stepperPhase == phaseDown && ((nowUs - lastPhaseStartUs) >= halfStepDurationUs)){	// Signal down for more than required time?
+		stepperPhase = phaseEnd;															// Update phase
+		lastPhaseStartUs = nowUs;															// Set done time
+	}
+	if (stepperPhase == phaseUp && ((nowUs - lastPhaseStartUs) >= halfStepDurationUs)) {	// Signal up for more than required time?
+		stepperPhase = phaseDown;															// Update phase
+		lastPhaseStartUs = nowUs;															// Set start time
+		digitalWrite(pulsePin, LOW);															// Set signal down
+	}
+	return stepperPhase;																	// Return current phase
 }

@@ -177,6 +177,7 @@ void dumpSettings(void) {
 	printInfo("microStepsPerStep = %d\n", microStepsPerStep);
 	printInfo("invertStepper = %s\n", invertStepper ? "false" : "true");
 	printInfo("stepperReduction = %.2f\n", stepperReduction);
+	printInfo("requiredRMP = %.2f\n", requiredRPM);
 	printInfo("driverMinimalMicroSec = %d\n", driverMinimalMicroSec);
 	printInfo("inertiaAngleStarting = %.2f\n", inertiaAngleStarting);
 	printInfo("inertiaAngleStopping = %.2f\n", inertiaAngleStopping);
@@ -433,6 +434,7 @@ void moveToTrack(uint8_t index) {
 	computeInertia();												// Compute inertia parameters
 	microStepsToGo = stepper.microStepsForAngle(deltaAngle);		// Compute micro steps to move
 	if (microStepsToGo) {											// Do we have to move?
+		inertiaEndStarting = microStepsToGo - inertiaStepsStarting;	// Set number of microsteps correponding to end of starting phase
 		startRotation();											// Start rotation phase
 	}
 	if (traceCode) {
@@ -651,7 +653,7 @@ void moveReceived(AsyncWebServerRequest *request) {
 		requiredAngle = -1;
 		currentStepDuration = normalStepDuration;
 		inertiaEndStarting = count + 1;
-		inertiaEndStarting = 0;
+		inertiaStepsStopping = 0;
 		startRotation();
 		char msg[50];											// Buffer for message
 		snprintf(msg, sizeof(msg),"<status>Ok, moving %d micro steps</status>", count);
@@ -1083,8 +1085,9 @@ void setup() {
 // ---- Permanent loop ----
 void loop() {
 	// Manage stepper rotation
+	StepperCommand::stepperPhases phase = stepper.stepperLoop();		// Run stepper loop
 	if (rotationState == stepperRunning) {							// Are we rotating?
-		stepper.turnOneMicroStep(currentStepDuration);				// Turn one micro step
+		if (phase == StepperCommand::phaseEnd) {						// At end of step?
 		currentAngle = encoder.floatModuloPositive(					// Make result in range 0-360
 			currentAngle + stepper.anglePerMicroStep()				// Update current angle
 			, 360.0);
@@ -1092,7 +1095,7 @@ void loop() {
 		if (requiredAngle) {										// Are we in track move (instead of step move)
 			if (microStepsToGo > inertiaEndStarting) {				// Are we in initial rotation?
 				currentStepDuration -= inertiaDurationDecrement;	// Decrement duration
-			} else if (microStepsToGo <= inertiaStepsStopping) {	// Are we in slowing down roration?
+				} else if (microStepsToGo <= inertiaStepsStopping) {	// Are we in slowing down rotation?
 				currentStepDuration += inertiaDurationIncrement;	// Increment duration
 			} else {												// We are in full speed part
 				currentStepDuration = normalStepDuration;			// Set normal duration
@@ -1100,6 +1103,9 @@ void loop() {
 		}
 		if (!microStepsToGo) {										// Do we end rotation?
 			stopRotation();											// Stop rotation
+		}
+		} else if (phase == StepperCommand::phaseIdle) {				// Are we idle?
+			stepper.turnOneMicroStep(currentStepDuration);				// Turn one micro step
 		}
 	} else if (rotationState == stepperStarting) {					// Are we starting?
 		if ((millis() - playerStartedTime) > playerDuration) {		// Do we exhaust playing time?
@@ -1117,13 +1123,16 @@ void loop() {
 			digitalWrite(runPin, LOW);								// Set rotation pin to low
 		}
 	} else if (rotationState == stepperFixing) {					// Are we fixing?
-		stepper.turnOneMicroStep(inertiaFinalStepDuration);			// Turn one micro step at slow speed
+		if (phase == StepperCommand::phaseEnd) {						// At end of step?
 		currentAngle = encoder.floatModuloPositive(					// Make result in range 0-360
 			currentAngle + stepper.anglePerMicroStep()				// Update current angle
 			, 360.0);
 		microStepsToGo--;											// Remove one micro step
 		if (!microStepsToGo) {										// Do we end rotation?
-			rotationState = stepperStopped;							// Set state back to stopper
+				rotationState = stepperStopped;							// Set state back to stoppeD
+			}
+		} else if (phase == StepperCommand::phaseIdle) {				// Are we idle?
+			stepper.turnOneMicroStep(inertiaFinalStepDuration);			// Turn one micro step at slow speed
 		}
 	} else if (rotationState == stepperStopped) {					// Are we stopped?
 		if (adjustPosition) {										// Is Position fixing enabled
@@ -1151,7 +1160,7 @@ void loop() {
 					}
 				}
 
-	if ((millis() - resultValueTime) > 1000) {						// Last result sent more than 1 second?
+	if ((millis() - resultValueTime) > 1000) {							// Last result sent more than 1 s?
 				if (abs(currentAngle - lastAngleSent) >= MIN_DELTA_ANGLE) {	// Send message only if there's a slight difference
 			if (traceCode) {
 				printInfo("Angle: %f\n", currentAngle);
