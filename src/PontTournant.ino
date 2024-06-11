@@ -152,7 +152,9 @@ static void printInfo(const char* _format, ...) {
 	vsnprintf_P(msg, sizeof(msg), _format, arguments);	// Return buffer containing requested format with given arguments
 	va_end(arguments);                                  // End of argument list
 	Serial.print(msg);			                        // Print on SERIAL_PORT
+	if (traceCode) {
 	events.send(msg, "info");							// Send message to destination
+	}
 }
 
 static void printError(const char* _format, ...) {
@@ -1162,9 +1164,6 @@ void loop() {
 
 	if ((millis() - resultValueTime) > 1000) {							// Last result sent more than 1 s?
 				if (abs(currentAngle - lastAngleSent) >= MIN_DELTA_ANGLE) {	// Send message only if there's a slight difference
-			if (traceCode) {
-				printInfo("Angle: %f\n", currentAngle);
-					}
 					// Sends an "angle" event to browser
 					char msg[10];									// Message buffer
 					snprintf_P(msg, sizeof(msg), PSTR("%.2f"), currentAngle);	// Convert angle to message
