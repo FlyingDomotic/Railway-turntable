@@ -10,19 +10,23 @@ Contrôle un pont tournant ferroviaire au travers d'un ESP8266, avec un moteur p
 
 ## What's for?/A quoi ça sert ?
 
-This code has been written to help a FabLab's member to implement a railway turntable for it HO scale railway, just clicking on an image of turntable. Initially build around one RPI 4, with a WaveShare's RS485 CAN HAT, an ACCNT QY3806-485RTU rotary encoder, a NMEA 29 stepper with a DM556 driver, and power supply to feed them, RPI 4 and CNA HAT where replaced by an ESP8266 with a simple RS485/TTL interface.
+This code has been written to help a FabLab's member to implement a railway turntable for its HO scale railway, just clicking on an image of turntable. It's build around an ESP8266, a simple RS485/TTL interface connected to an ACCNT QY3806-485RTU rotary encoder, a NMEA 29 stepper with a DM556 driver, a MP3 sound module to complete the feeling and power supply to feed them all.
 
-On command side, idea was to have an image or turntable, and just click on track where we want to rotate turntable.
+On command side, idea was to have an image or turntable, and just click on track where we want to rotate turntable. Of course, commands may also be sent to embedded web server to get turntable state and position, as well as changing them. As soon as railway structure will be completely defined, DCC support will be added.
 
-Ce code a été élaboré à la demande d'un membre du FabLab, qui souhaitait commander un pont tournant sur un circuit ferroviaire à l'échelle HO, en cliquant sur une image du pont. Initialement construit autour d'un RPI 4, avec une interface RS485 CAN HAT de chez waveshare, un capteur de rotation modbus QY3806-485RTU de chez ACCNT, un moteur pas à pas NMEA 29 avec un driver DM556, et les alimentations nécessaires pour tout ça, le RPI 4 et le CAN HAT ont été remplacés par un ESP8266 avec une interface RS485/TTL de base.
+Code can support up to 36 different tracks. All settings are done through a graphical interface with feedback. They're saved into a JSON file that can be either backup and/or manually edited, if needed. This includes stepper, encoder and MP3 module characteristics, values and offsets, RPM, inertia, sound played during the different phases... Extended list can be found latter on in this document.
 
-Côté commande, l'idée est d'avoir une image du pont et de cliquer sur la voie vers laquelle on souhaite orienter le pont.
+Ce code a été élaboré à la demande d'un membre du FabLab, qui souhaitait commander un pont tournant sur un circuit ferroviaire à l'échelle HO, en cliquant sur une image du pont. Il est construit autour d'un ESP8266, d'une interface RS485 de base connectée à un capteur de rotation MODBUS QY3806-485RTU de chez ACCNT, d'un moteur pas à pas NMEA 29 avec un driver DM556, et des alimentations nécessaires pour tout ça.
+
+Côté commande, l'idée est d'avoir une image du pont et de cliquer sur la voie vers laquelle on souhaite orienter le pont. Évidement, des commandes peuvent être envoyés au serveur web embarqué pour récupérer son état et sa position, mais aussi pour les modifier. Dès que la structure du réseau sera complètement définie, le support d'une interface DCC sera également ajouté.
+
+Le code support jusqu'à 36 voies. L'ensemble du paramétrage est réalisé au travers d'une interface graphique interactive. Il est sauvegardé dans un fichier JSON qui peut être sauvegardé et/ou modifié manuellement, si besoin. Ceci concerne les caractéristiques, valeurs et décalages du moteur pas à pas, de l'encodeur et du module MP3, la vitesse de rotation, l'inertie et les sons associés aux différentes phases de la rotation. La liste complète figure plus bas.
 
 ## Driving choices / Choix retenus
 
 Idea is to create a web server, which will display a turntable image, and detect clicks (or pushes on a touch screen). Clicks close to a point on image will rotate turntable. Rotation angle will be computed from current angle (from rotary encoder), and angle associated to the point.
 
-Code, initially written in Python, has been rewritten in C++. It easily manages web server, GPIO to drive DM556, as well as modbus rotary encoder connected to RS485 interface. An HTML file will display turntable image and return click relative position (0%-100%), allowing to reduce/enlarge image without impact.
+Code, initially written in Python, has been rewritten in C++. It easily manages web server, GPIO to drive DM556, as well as MODBUS rotary encoder connected to RS485 interface. An HTML file will display turntable image and return click relative position (0%-100%), allowing to reduce/enlarge image without impact.
 
 A page to manage flash content will be added. Another one will be used to set all parameters (only GPIO will be defined at compile time, as we don't care changing them). Some debug tools have also been added.
 
@@ -32,7 +36,7 @@ English and French languages are supported by interface, and will automatically 
 
 L'idée est de créer un serveur Web, qui affichera une image du pont et détectera les clics (ou les appuis sur un écran tactile). Les clics proches d'un point sur l'image déclencheront la rotation du pont. L'angle de rotation sera déterminé à partir de l'angle actuel (récupéré par le capteur de position) et l'angle associé au point.
 
-Initialement écrit en Python, le code a été réécrit en C++. Il gère facilement un serveur Web, les GPIO pour commander le DM556, ainsi que la partie modbus du capteur de rotation. Un fichier HTML affichera l'image et retournera la position relative (0%-100%) en x et y de l'image cliquée, pour permettre d'agrandir ou réduire l'image sans impact.
+Initialement écrit en Python, le code a été réécrit en C++. Il gère facilement un serveur Web, les GPIO pour commander le DM556, ainsi que la partie MODBUS du capteur de rotation. Un fichier HTML affichera l'image et retournera la position relative (0%-100%) en x et y de l'image cliquée, pour permettre d'agrandir ou réduire l'image sans impact.
 
 Une page gérant le contenu de la flash sera ajoutée, ainsi qu'une autre pour définir l'ensemble des paramètres (seuls les GPIO sont définis à la compilation, vu le peu d'intérêt de les changer).
 
@@ -44,19 +48,19 @@ Le Français et l'Anglais sont supportés par le serveur, et seront choisis auto
 
 Connection between ESP and rotary encoder is done by a simple RS485/TTL interface. A small interface, based on 4N25 optocoupler, with a limitation resistor on LED side, has been designed to connect 24V DM556 driver to 3.3V ESP.
 
-An optional optocoupler is also available to connect a LED to signal turntable rotation.
+An optional optocoupler is also available to connect a LED to signal turntable rotation. It can driver/be replaced by a relay if current is important.
 
-An optional MP3 reader, based on DFPlayer Mini MP3 Player chip. It will allow to play a start sound during a settable time, a rotation sound, as long as turntable turns, and a stop sound during a settable time (all optional).
+An optional MP3 reader, based on DFPlayer Mini MP3 Player cr hip. It will allow to play a start sound during a settable time, a rotation sound, as long as turntable turns, and a stop sound during a settable time (all optional).
 
-To make turntable more realistic, inertia is simulated when starting rotation and/or ending it.
+To make turntable more realistic, inertia is simulated when starting rotation and/or another when stoppoing it.
 
-La connexion entre l'ESP et le capteur de rotation est réalisée par un module RS485/TTL simple. Une petite interface à base d'opto coupleurs 4N25, avec une résistance de limitation côté LED, a été réalisée pour connecter le DM556 alimenté en 24V, alors que l'ESP est en 3,3V.
+La connexion entre l'ESP et le capteur de rotation est réalisée par un module RS485/TTL simple. Une petite interface à base d'optocoupleurs 4N25, avec une résistance de limitation côté LED, a été réalisée pour connecter le DM556 alimenté en 24V, alors que l'ESP est en 3,3V.
 
-Un opto coupleur est également disponible pour connecter une LED de rotation (optionnel).
+Un optocoupleur est également disponible pour connecter une LED de rotation (optionnel). Il peut commander/être remplacé par un relai si le courant à commuter est important.
 
 Un lecteur MP3, basé sur un chip DFPlayer Mini MP3 Player peut également être ajouté (optionnel). Il permet de jouer un son de démarrage pendant une durée paramétrable, un son de rotation tant que le pont tourne, et un son d'arrêt pendant une durée paramétrable (tous optionnels).
 
-Pour rendre le pont tournant plus réaliste, une inertie est simulée lorsqu'on démarre et arrête le pont.
+Pour rendre le pont tournant plus réaliste, une inertie est simulée lorsqu'on démarre le pont et/ou une seconde lorsqu'on l'arrête.
 
 ## Network/Réseau
 
@@ -66,7 +70,7 @@ La connexion au réseau est faite au travers du Wifi. Si vous spécifiez un SSID
 
 ## Prerequisites/Prérequis
 
-VSCodium (or Visual Studio Code) with PlatformIO should be installed. You may also use Arduino IDE, as long as you read platforio.ini file to get the list of required libraries.
+VSCodium (or Visual Studio Code) with PlatformIO should be installed. You may also use Arduino IDE, as long as you read platformio.ini file to get the list of required libraries.
 
 Vous devez avoir installé VSCodium (ou Visual Studio Code) avec PlatformIO. Vous pouvez également utiliser l'IDE Arduino, à condition d'extraire la liste des librairies requises indiquée dans le fichier platformio.ini.
 
@@ -77,7 +81,7 @@ Follow these steps:
 1. Clone repository in folder where you want to install it
 ```
 cd <where_ever_you_want>
-git clone https://github.com/FlyingDomotic/railwayTurntable.git railwayTurntable
+git clone https://github.com/FlyingDomotic/Railway-turntable railwayTurntable
 ```
 2. Make ESP connections:
    - Stepper enable optocoupler is connected to D0 (optional as long as you force it permanently to low)
@@ -99,16 +103,16 @@ Suivez ces étapes :
 1. Clonez le dépôt GitHub dans le répertoire où vous souhaitez l'installer
 ```
 cd <là_où_vous_voulez_l'installer>
-git clone https://github.com/FlyingDomotic/railwayTurntable.git railwayTurntable
+git clone https://github.com/FlyingDomotic/Railway-turntable railwayTurntable
 ```
 2. Connecter l'ESP:
-   - L'opto coupleur "stepper enable" à D0 (optionnel si vous forcez le signal à l'état bas de façon permanente)
-   - L'opto coupleur "pulse" à D7
-   - L'opto coupleur "direction" à D8
+   - L'optocoupleur "stepper enable" à D0 (optionnel si vous forcez le signal à l'état bas de façon permanente)
+   - L'optocoupleur "pulse" à D7
+   - L'optocoupleur "direction" à D8
    - Le signal RX du module RS485 à D5
    - Le signal TX du module RS485 à D6
    - Le module MP3 optionnel à D1 (TX) et D2 (RX)
-   - l'opto coupleur de la LED de rotation optionnelle à D3.
+   - l'optocoupleur de la LED de rotation optionnelle à D3.
 3. Compiler et charger le code dans l'ESP.
 4. Charger le contenu du répertoire "data" dans la flash de l'ESP.
 5. Démarrer l'ESP et se connecter au SSID Wifi SSID "PontTournant_XXXXXX" (où XXXXXX représente l'ID du chip ESP)
@@ -126,10 +130,10 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir l
   - Stepper reduction factor: Number of rotation of stepper for one rotation of turntable (1.0 if no reduction, 3.0 if 3 stepper steps are needed to get one turntable step).
   - Delay between commands (µs): Give minimal delay between 2 commands. Given in driver's doc.
   - Turntable RPM: Give desired turntable rotation speed. Often, between 1 and 2 RPM.
-	- Inertia factor when starting: start rotation with speed equal to RPM divided by this number when simulating inertia. Set to 1 to ignore starting inertia.
-	- Angle before full speed: angle, in degree, to accellerate from initial speed to normal RPM. Set to zero to ignore starting inertia.
-	- Inertia factor when stopping: end rotation with speed equal to RPM divided by this number when simulating inertia. Set to 1 to ignore stopping inertia.
-	- Angle before slowing down: angle, in degree, to deccellerate from normal RPM to ending speed. Set to zero to ignore ending inertia.
+  - Inertia factor when starting: start rotation with speed equal to RPM divided by this number when simulating inertia. Set to 1 to ignore starting inertia.
+  - Angle before full speed: angle, in degree, to accelerate from initial speed to normal RPM. Set to zero to ignore starting inertia.
+  - Inertia factor when stopping: end rotation with speed equal to RPM divided by this number when simulating inertia. Set to 1 to ignore stopping inertia.
+  - Angle before slowing down: angle, in degree, to decelerate from normal RPM to ending speed. Set to zero to ignore ending inertia.
   - Adjust position: permanently read turntable position and realign it with required angle when selected.
 
   - Degrés par pas : Indiquer le nombre de degrés correspondant à 1 pas. Par exemple, un moteur avec 200 pas par tour fera 200/360 = 1,8° par pas.
@@ -137,10 +141,10 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir l
   - Réduction moteur : nombre de tours du moteur pour un tour du pont (1.0 s'il n'y a pas de réducteur, 3.0 si 3 pas du moteur sont nécessaires pour avoir un pas sur le pont).
   - Délai entre commandes (µs) : Indiquer le délai minimum entre 2 envois de commandes. Indiqué dans la doc du driver.
   - Tours par minute du pont : Indiquer la vitesse de rotation souhaitée du pont. En général, entre 1 et 2 tours par minute.
-	- Facteur inertiel au démarrage : démarre la rotation avec une vitesse égale à la vitesse du pont divisée par ce nombre. Mettre à 1 pour ignorer l'inertie au démarrage.
-	- Angle avant pleine vitesse : angle, en degrés, pour accélérer de la vitesse de démarrage à la vitesse normale. Mettre à 0 pour ignorer l'inertie au démarrage.
-	- Facteur inertiel à l'arrêt : termine la rotation avec une vitesse égale à la vitesse du pont divisée par ce nombre. Mettre à 1 pour ignorer l'inertie à l'arrêt.
-	- Angle avant ralentissement : angle, en degrés, pour freiner de la vitesse normale à la vitesse d'arrêt. Mettre à 0 pour ignorer l'inertie au démarrage.
+  - Facteur inertiel au démarrage : démarre la rotation avec une vitesse égale à la vitesse du pont divisée par ce nombre. Mettre à 1 pour ignorer l'inertie au démarrage.
+  - Angle avant pleine vitesse : angle, en degrés, pour accélérer de la vitesse de démarrage à la vitesse normale. Mettre à 0 pour ignorer l'inertie au démarrage.
+  - Facteur inertiel à l'arrêt : termine la rotation avec une vitesse égale à la vitesse du pont divisée par ce nombre. Mettre à 1 pour ignorer l'inertie à l'arrêt.
+  - Angle avant ralentissement : angle, en degrés, pour freiner de la vitesse normale à la vitesse d'arrêt. Mettre à 0 pour ignorer l'inertie au démarrage.
   - Inverser le sens du moteur : cocher pour inverser le sens de rotation fu moteur ;-)
   - Ajuster la position : lit en permanence la position du pont et la réaligne avec l'angle demandé si coché.
 
@@ -149,13 +153,13 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir l
   - Slave id: Encoder's RS485 bus slave ID. See encoder's doc. Often 1.
   - Register id: Encoder's register number containing rotation angle. See encoder's doc. Often 0.
   - Encoder angle: Give encoder offset angle to align turntable to track #1.
-  - Clockwise increment: tick when encoder increments angle clockwisely. Invert it if image turns a way and turntable the opposite one. 
+  - Clockwise increment: tick when encoder increments angle clock-wisely. Invert it if image turns a way and turntable the opposite one. 
 
   - Utiliser l'encodeur : Cocher pour utiliser l'encodeur. Si décoché, le système doit être positionné manuellement sur la voie 1 au lancement. L'angle du pont sera calculé au lieu d'être lu sur l'encodeur.
   - Numéro de l'esclave : Numéro de l'esclave sur le bus RS485. Voir la doc de l'encodeur. Couramment 1.
   - Numéro du registre : Numéro du registre contenant l'angle de rotation. Voir la doc de l'encodeur. Souvent 0.
   - Angle de l'encodeur : Donner l'angle de l'encodeur pour aligner le pont sur la voie 1.
-  - Increment sens horaire : cocher si l'encodeur incremente l'angle dans le sens horaire. Inverser si le pont et l'image du pont tournent en sens opposés.
+  - Incrément sens horaire : cocher si l'encodeur incrémente l'angle dans le sens horaire. Inverser si le pont et l'image du pont tournent en sens opposés.
 
 #### Define sensitive zones parameters/Définir les paramètres des zones sensibles
   - Sensitive zones radius: Give sensitive zones radius, in image percentage. 0% maps centers, 50% image width.
@@ -164,7 +168,7 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir l
 
   - Rayon des zones sensibles : Indique le rayon des zones sensibles , en % de l'image. 0% correspond au centre, 50% à la largeur de l'image.
   - Largeur des zones sensibles : Indique la largeur de la zone sensible, en % de l'image. Des valeurs autour de 4 sont courantes.
-  - Afficher le muméro de voie dans un rond : ne concerne que la vue normale (/), toujours affiché dans (/setup) 
+  - Afficher le numéro de voie dans un rond : ne concerne que la vue normale (/), toujours affiché dans (/setup) 
 
 #### Define MP3 reader parameters/Définir les paramètres du module MP3
   - Activate sound: Tick to activate sound globally.
@@ -184,12 +188,12 @@ Note: MP3 files should be written in /MP3 folder on SD card. Filenames should be
   - Volume sonore : Indiquer le volume sonore désiré (entre 0 et 30).
   - Index son avant rotation : Index du MP3 à lire avant la rotation. Mettre à zéro si non utilisé.
   - Durée son avant rotation (s) : Durée (en secondes) de lecture du son avant la rotation.
-  - Tester le son avant roration : jour le son spécifié dans "Index son avant rotation" pendant "Durée son avant rotation" secondes.
+  - Tester le son avant rotation : jour le son spécifié dans "Index son avant rotation" pendant "Durée son avant rotation" secondes.
   - Index son pendant rotation : Index du MP3 à lire pendant la rotation. Mettre à zéro si non utilisé.
-  - Tester le son pendant roration : jour le son spécifié dans "Index son pendant rotation" pendant 5 secondes.
+  - Tester le son pendant rotation : jour le son spécifié dans "Index son pendant rotation" pendant 5 secondes.
   - Index son après rotation : Index du MP3 à lire avant la rotation. Mettre à zéro si non utilisé.
   - Durée son après rotation (s) : Durée (en secondes) de lecture du son après la rotation.
-  - Tester le son après roration : jour le son spécifié dans "Index son après rotation" pendant "Durée son après rotation" secondes.
+  - Tester le son après rotation : jour le son spécifié dans "Index son après rotation" pendant "Durée son après rotation" secondes.
 
 Note: Les fichiers MP3 doivent être écrits dans le répertoire /MP3 de la carte SD. Les noms doivent être compris entre 0001.mp3 et 9999.mp3.
 
@@ -205,7 +209,7 @@ Note: Les fichiers MP3 doivent être écrits dans le répertoire /MP3 de la cart
 #### Define trace parameters/Définir les paramètres de trace
   - Display code traces: Tick to display code's traces on ESP serial link. Used to debug.
   - Display modules traces: Tick to display modules' traces on ESP serial link. Used to debug.
-  - Display Java traces: tick to display Javascript traces. Used to debug.
+  - Display Java traces: tick to display JavaScript traces. Used to debug.
 
   - Affichage des traces du code : Cocher pour afficher les traces du code sur le lien série de l'ESP. Utilisé pour déverminer.
   - Affichage des traces des modules : Cocher pour afficher les traces des modules sur le lien série de l'ESP. Utilisé pour déverminer.
@@ -213,14 +217,14 @@ Note: Les fichiers MP3 doivent être écrits dans le répertoire /MP3 de la cart
 
 #### Stall track #1/Caler la voie 1
   - Stall track#1 on turn table using +/- 1/500 buttons.
-    - If (real) turntable turns clockwisely when hitting any of the "+" buttons, invert "Invert stepper rotation".
+    - If (real) turntable turns clock-wisely when hitting any of the "+" buttons, invert "Invert stepper rotation".
     - If (real) turntable and image on browser are turning in opposite way, invert "Clockwise increment".
-  - Click on "<--" of track #1 to save global stall.
+  - Click on "<--" of track #1 to save global stall (double check current angle just under image and value of line, that should be close, it's easy to change the wrong line ;-)
 
   - Caler la voie 1 sur le le plateau avec les touches +/- 1/500.
     - Si le pont (réel) tourne dans le sens des aiguilles d'une montre lorsqu'on appuie sur un des boutons "+", inverser "Inverser le sens du moteur"
-    - Si le pont (réel) et son image sur le navigatue tournent en sens opposé, inverser "Increment sens horaire".
-  - Cliquer sur "<--" de la voie voie 1 pour mémoriser le calage global.
+    - Si le pont (réel) et son image sur le navigateur tournent en sens opposé, inverser "Incrément sens horaire".
+  - Cliquer sur "<--" de la voie voie 1 pour mémoriser le calage global (bien vérifier l'angle affiché sous l'image et celui de la ligne, il est facile de modifier la mauvaise ligne ;-)
 
 #### Stall image on track #1/Caler l'image sur la voie 1
   - Stall image  on screen over track #1 using +/- 1/500 buttons.

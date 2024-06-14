@@ -21,7 +21,7 @@
   "slaveId": 1,
   "regId": 0,
   "radius": 47,
-  "enableCircles": flase,
+  "enableCircles": false,
   "enableSound": false,
   "soundVolume": 10,
   "beforeSoundIndex": 1,
