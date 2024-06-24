@@ -84,12 +84,14 @@ void StepperCommand::rotateAngle(float _angle){
 //           count of micro steps to turn the angle
 //       side effect:
 //           stepper direction has been set
-unsigned long StepperCommand::microStepsForAngle(float _angle){
+unsigned long StepperCommand::microStepsForAngle(float _angle, bool loadDirection){
   unsigned long microSteps = (abs(_angle) + (abs(anglePerMicroStep()) / 2.0)) * microStepsPerStep * stepperReduction / degreesPerStep;
-  if (microSteps) {
+	if (microSteps && loadDirection) {
+		/*
     if (traceDebug) {
 			Serial.printf("Stepper needs %ld micro-steps of %.2f ms to turn about %.2f° in %.2f s\n", microSteps, stepDuration * 1000.0, _angle, microSteps * stepDuration);
     }
+		*/
     // Set correct direction
     if (_angle < 0.0) {
       setDirection(-1);

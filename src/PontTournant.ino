@@ -100,14 +100,15 @@ StepperCommand
 float lastAngleSent = 0;											// Last sent angle
 float currentAngle = 0;												// Current angle
 float requiredAngle = -1;											// Required angle
+unsigned long rotationStartTime = 0;								// Time of rotation start
 unsigned long microStepsToGo = 0;									// Remaining micro steps to send
-uint16_t inertiaStepsStarting = 0;									// Number of steps corresponding to inertiaAngleStarting
-uint16_t inertiaEndStarting = 0;									// Number of step of end of starting steps (total steps - inertiaStepsStarting)
+unsigned long inertiaStepsStarting = 0;								// Number of steps corresponding to inertiaAngleStarting
+unsigned long inertiaEndStarting = 0;								// Number of step of end of starting steps (total steps - inertiaStepsStarting)
 float normalStepDuration = 0.0;										// Normal (full speed) step duration
 float currentStepDuration = 0.0;									// Current (variable) step duration
 float inertiaInitialStepDuration = 0.0;								// Duration of step when starting
 float inertiaDurationDecrement = 0.0;								// Step duration decrement to add each steps when starting
-uint16_t inertiaStepsStopping = 0;									// Number of steps correspinding to inertiaAngleStopping
+unsigned long inertiaStepsStopping = 0;								// Number of steps corresponding to inertiaAngleStopping
 float inertiaDurationIncrement = 0.0;								// Step duration increment to add each steps when stopping
 float inertiaFinalStepDuration = 0.0;								// Duration of step when stopping (will also be used to fix position)
 enum stepperState {													// Rotation states
@@ -206,11 +207,12 @@ void dumpSettings(void) {
 	printInfo("traceJava = %s\n", traceJava ? "true" : "false");
 
 	// Dump all defined angles
-	char name[10];
 	for (uint8_t i = 1; i <= POSITION_COUNT; i++) {
-		snprintf(name, sizeof(name), "a%d", i);
-		printInfo("%s = %.2f\n", name, indexes[i]);
+		if (indexes[i] != -1) {
+			printInfo("a%d=%.2f ", i, indexes[i]);
+		}
 	}
+	printInfo("\n");
 }
 
 // Read settings
@@ -389,8 +391,24 @@ Modbus::ResultCode modbusCb(Modbus::ResultCode event, uint16_t transactionId, vo
 void startRotation(void) {
 	digitalWrite(runPin, HIGH);										// Set rotation pin to high
 	if (rotationState == stepperStopped) {							// Are we stopped?
+		if (requiredAngle != -1) {										// Are we in track move (instead of step move)
+			computeInertia();											// Compute inertia parameters
 		currentStepDuration = inertiaInitialStepDuration;			// Set initial step duration
+			inertiaEndStarting = microStepsToGo - inertiaStepsStarting;	// Set number of microsteps correponding to end of starting phase
+			printInfo("Moving %ld steps, %ld (up to %ld) at %.2fms-%.2fms, normal at %.2fms, %ld stop +%.2fms to %.2fms\n",
+				microStepsToGo, 
+				inertiaStepsStarting, inertiaEndStarting, currentStepDuration * 1000.0, inertiaDurationDecrement * 1000.0,
+				normalStepDuration * 1000.0,
+				inertiaStepsStopping, inertiaDurationIncrement * 1000.0, inertiaFinalStepDuration * 1000.0);
+		} else {
+			currentStepDuration = normalStepDuration;					// Do rotation at normal speed
+			inertiaEndStarting = microStepsToGo + 1;					// Force end of accelleration greater than count of microsteps
+			inertiaStepsStopping = -1;									// Force start of decelleration after stop
+			printInfo("Moving %ld %.2fms\n",
+				microStepsToGo, normalStepDuration * 1000.0);
+		}
 		rotationState = stepperRunning;								// Set to running by default
+		rotationStartTime = millis();									// Set start rotation time
 		if (beforeSoundIndex) {										// Do we have a starting sound?
 			rotationState = stepperStarting;						// Set to starting
 			playerDuration = beforeSoundDuration * 1000;			// Convert duration to ms
@@ -407,11 +425,18 @@ void startRotation(void) {
 		if (moveSoundIndex) {										// Do we have a rotation sound?
 			playIndex(moveSoundIndex);								// Play sound
 		}
+	
+	} else {
+		// Put here action you may want when starting a new rotation while turntable is already moving
+		// By default, new target is set without stopping rotation, nor playing ending and starting sound
+		// If rotation direction is changed, turntable will hardly turn in reverse direction
+		printInfo("Received startRotation while moving\n");
 	}
 }
 
 // Called at rotation end
 void stopRotation(void) {
+	printInfo("Stopping rotation after %.1fs\n", (millis() - rotationStartTime) / 1000.0);
 	if (afterSoundIndex) {											// Do we have a stop sound?
 		rotationState = stepperStopping;							// Set to stopping
 		playerDuration = afterSoundDuration * 1000;					// Convert duration in ms
@@ -433,14 +458,12 @@ void moveToTrack(uint8_t index) {
 	if (deltaAngle < -180.0) {
 		deltaAngle += 360.0;
 	}
-	computeInertia();												// Compute inertia parameters
 	microStepsToGo = stepper.microStepsForAngle(deltaAngle);		// Compute micro steps to move
-	if (microStepsToGo) {											// Do we have to move?
-		inertiaEndStarting = microStepsToGo - inertiaStepsStarting;	// Set number of microsteps correponding to end of starting phase
-		startRotation();											// Start rotation phase
-	}
 	if (traceCode) {
-		printInfo("Current angle = %.2f, required angle = %.2f, delta angle = %.2f, micro step count = %ld, angle per micro step = %.2f\n", currentAngle, requiredAngle, deltaAngle, microStepsToGo, stepper.anglePerMicroStep());
+		printInfo("Current angle %.2f, required %.2f, delta %.2f, %ld microsteps, %.2f°/microstep\n", currentAngle, requiredAngle, deltaAngle, microStepsToGo, stepper.anglePerMicroStep());
+	}
+	if (microStepsToGo) {											// Do we have to move?
+		startRotation();											// Start rotation phase
 	}
 }
 
@@ -477,23 +500,25 @@ void computeInertia() {
 	normalStepDuration = stepper.getStepDuration();				// Get step duration
 	
 	if (inertiaAngleStarting > 0.0 && inertiaFactorStarting > 1.0) {										// Do we have to add starting inertia?
-		inertiaStepsStarting = stepper.microStepsForAngle(inertiaAngleStarting);							// Number of steps to turn of starting angle
+		inertiaStepsStarting = stepper.microStepsForAngle(inertiaAngleStarting, false);						// Number of steps to turn of starting angle
 		inertiaInitialStepDuration = normalStepDuration * inertiaFactorStarting;							// Step duration at startup
 		inertiaDurationDecrement = (inertiaInitialStepDuration - normalStepDuration) / inertiaStepsStarting;//Decrement of duration of each step when starting
 	}
 
 	if (inertiaAngleStopping > 0.0 && inertiaFactorStopping > 1.0) {										// Do we have to add stopping inertia?
-		inertiaStepsStopping = stepper.microStepsForAngle(inertiaAngleStopping);							// Number of steps to turn of stopping angle
+		inertiaStepsStopping = stepper.microStepsForAngle(inertiaAngleStopping, false);						// Number of steps to turn of stopping angle
 		inertiaFinalStepDuration = normalStepDuration * inertiaFactorStopping;								// Step duration at startup
 		inertiaDurationIncrement = (inertiaFinalStepDuration - normalStepDuration) / inertiaStepsStopping;	//Increment of duration of each step when stopping
 	}
 
+	/*
 	if (traceCode) {
-		printInfo("Steps %.2f ms, %d starting from %.2f ms by %.2f ms, %d stopping up to %.2f ms by %.2f ms\n",
+		printInfo("Steps %.2f ms, %ld start %.2f ms-%.2f ms, %ld stop to %.2f ms+%.2f ms\n",
 			normalStepDuration * 1000.0,
 			inertiaStepsStarting, inertiaInitialStepDuration * 1000.0, inertiaDurationDecrement * 1000.0,
 			inertiaStepsStopping, inertiaFinalStepDuration * 1000.0, inertiaDurationIncrement * 1000.0);
 	}
+	*/
 }
 
 //	---- MP3 player routines ----
@@ -501,9 +526,11 @@ void computeInertia() {
 // Play a given index
 void playIndex(int index) {
 	if (enableSound) {												// If sound enabled
+		/*
 		if (traceCode) {
-			printInfo("Playing index %d\n", index);
+			printInfo("Playing file %d\n", index);
 		}
+		*/
 		playerStartedTime = millis();								// Load starting time
 		mp3Player.play(index);										// Start playing file
 	}
@@ -512,9 +539,11 @@ void playIndex(int index) {
 // Stop playing
 void playStop() {
 	if (enableSound) {												// If sound enabled
+		/*
 		if (traceCode) {
 			printInfo("Stop playing\n");
 		}
+		*/
 		mp3Player.stop();
 	}
 }
@@ -629,7 +658,7 @@ void clickReceived(AsyncWebServerRequest *request) {
 				}
 			}
 			if (traceCode) {
-				printInfo("Index: %d\n", closestIndex);
+				printInfo("Move to index: %d\n", closestIndex);
 			}
 			// Turn table to closest index, if found
 			if (closestIndex >=0) {
@@ -653,9 +682,6 @@ void moveReceived(AsyncWebServerRequest *request) {
 		stepper.setDirection(count);
 		microStepsToGo = abs(count);
 		requiredAngle = -1;
-		currentStepDuration = normalStepDuration;
-		inertiaEndStarting = count + 1;
-		inertiaStepsStopping = 0;
 		startRotation();
 		char msg[50];											// Buffer for message
 		snprintf(msg, sizeof(msg),"<status>Ok, moving %d micro steps</status>", count);
@@ -1094,7 +1120,7 @@ void loop() {
 			currentAngle + stepper.anglePerMicroStep()				// Update current angle
 			, 360.0);
 		microStepsToGo--;											// Remove one micro step
-		if (requiredAngle) {										// Are we in track move (instead of step move)
+			if (requiredAngle != -1) {									// Are we in track move (instead of step move)
 			if (microStepsToGo > inertiaEndStarting) {				// Are we in initial rotation?
 				currentStepDuration -= inertiaDurationDecrement;	// Decrement duration
 				} else if (microStepsToGo <= inertiaStepsStopping) {	// Are we in slowing down rotation?
@@ -1117,6 +1143,7 @@ void loop() {
 				playStop();											// Stop starting sound
 			}
 			rotationState = stepperRunning;							// We're now running
+			rotationStartTime = millis();								// Set start rotation time
 		}
 	} else if (rotationState == stepperStopping) {					// Are we stopping?
 		if ((millis() - playerStartedTime) > playerDuration) {		// Do we exhaust playing time?

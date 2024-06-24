@@ -17,7 +17,7 @@
 				void setParams(float _degreesPerStep, uint16_t _microStepsPerStep, float _stepperReduction, bool _invertStepper, uint8_t _driverMinimalMicroSec, float _RPM, bool _traceDebug);
 				void setDirection(int16_t direction);
 				void rotateAngle(float _angle);
-				unsigned long microStepsForAngle(float _angle);
+				unsigned long microStepsForAngle(float _angle, bool loadDirection = true);
 				float anglePerMicroStep(void);
 				uint8_t getDirection(void);
 				void turnOneMicroStep(float requiredDuration = 0.0);

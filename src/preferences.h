@@ -1,3 +1,5 @@
+#include <arduino.h>					// Arduino
+
 uint8_t enablePin = D0;                 // Pin where stepper enable signal is connected to
 uint8_t mp3TxPin = D1;                  // Pin where MP3 module RX is connected to (serial protocol)
 uint8_t mp3RxPin = D2;                  // Pin where MP3 module TX is connected to (serial protocol)
