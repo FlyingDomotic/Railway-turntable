@@ -89,7 +89,7 @@ git clone https://github.com/FlyingDomotic/Railway-turntable railwayTurntable
    - Stepper direction optocoupler is connected to D8
    - RS485 RX signal is connected to D5
    - RS485 TX signal is connected to D6
-   - Optional rotation LED optocoupler is connected to D3
+   - Optional rotation LED optocoupler (or relay) is connected to D3
    - Optional MP3 module (serial) is connected to D1 (TX) and D2 (RX)
 3. Compile and load code into ESP.
 4. Load data folder into ESP flash.
@@ -112,13 +112,19 @@ git clone https://github.com/FlyingDomotic/Railway-turntable railwayTurntable
    - Le signal RX du module RS485 à D5
    - Le signal TX du module RS485 à D6
    - Le module MP3 optionnel à D1 (TX) et D2 (RX)
-   - l'optocoupleur de la LED de rotation optionnelle à D3.
+   - l'optocoupleur (ou le relais) de la LED de rotation optionnelle à D3.
 3. Compiler et charger le code dans l'ESP.
 4. Charger le contenu du répertoire "data" dans la flash de l'ESP.
 5. Démarrer l'ESP et se connecter au SSID Wifi SSID "PontTournant_XXXXXX" (où XXXXXX représente l'ID du chip ESP)
 6. Connectez-vous à http://192.168.4.1/setup pour définir les paramètres de votre configuration (incluant SSID et mot de passe de votre Wifi personnel si besoin). Voir ci-dessous pour les détails.
 
-Si besoin, vous pouvez vous connecter sur le lien série/USB de lESP pour voir les messages de déverminage (à 74880 bds).
+Si besoin, vous pouvez vous connecter sur le lien série/USB de l'ESP pour voir les messages de déverminage (à 74880 bds).
+
+##Schema/Schéma
+
+A schema of possible implementation can be found in schema.jpg. In this implementation, LED is replaced by a blinking module powered by 20V AC, so optocoupler is replaced by a relay.
+
+Un schéma d'une implementation possible est disponible dans le fichier schema.jpg. Dans celle-ci, la LED est remplacée par un module clignotant alimenté en 20V alternatif, l'optocoupleur est donc remplacé par un relais.
 
 ## Settings/Paramètres
 

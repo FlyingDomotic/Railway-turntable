@@ -34,7 +34,7 @@ function translatePage() {
 	let pageName = location.pathname.substr(1).replace("/","_");
 	const dotPosition = pageName.lastIndexOf(".");
 	if (dotPosition > 0) {
-  	pageName = pageName.substring(0,dotPosition);
+		pageName = pageName.substring(0,dotPosition);
 	}
 	document.title = translations[pageName+"Title"];
 }
@@ -44,10 +44,9 @@ function translateElement(element) {
 	const key = element.getAttribute("data-i18n-key");
 	const translation = translations[key];
 	if (element.nodeName == "INPUT" || element.nodeName == "BUTTON" ) {
-  	element.value = translation;
+		element.value = translation;
 	} else {
-  	element.innerText = translation;
-	  
+		element.innerText = translation;
 	}
 }
 
@@ -55,11 +54,11 @@ function translateElement(element) {
 function bindLocaleSwitcher(initialValue) {
 	const switcher = document.querySelector("[data-i18n-switcher]");
 	if (switcher) {
-  	switcher.value = initialValue;
-  	switcher.onchange = (e) => {
-  		// Set the locale to the selected option[value]
-  		setLocale(e.target.value);
-  	};
+		switcher.value = initialValue;
+		switcher.onchange = (e) => {
+			// Set the locale to the selected option[value]
+			setLocale(e.target.value);
+		};
 	}
 }
 

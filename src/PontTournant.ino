@@ -1,7 +1,7 @@
 /*
  *	   English: Railway turntable control
  *	   Français : Contrôle d'un pont tournant ferroviaire miniature
- * 
+ *
  *	Hardware
  *		ESP8266
  *		Stepper with driver (enable/pulse/direction) (for example NEMA 24 with DM556T)
@@ -119,8 +119,8 @@ enum stepperState {													// Rotation states
 	stepperFixing,
 	testingSound
 };
-stepperState rotationState = stepperStopped;						// Rotation current state
-#define MIN_DELTA_ANGLE 0.02										// Minimum delta before sending angle change
+stepperState rotationState = stepperStopped;			// Rotation current state
+#define MIN_DELTA_ANGLE 0.02							// Minimum delta before sending angle change
 const char stepperStateText0[] PROGMEM = "Stopped";
 const char stepperStateText1[] PROGMEM = "Starting";
 const char stepperStateText2[] PROGMEM = "Running";
@@ -130,18 +130,18 @@ const char stepperStateText5[] PROGMEM = "TestingSound";
 const char *const stepperStateTable[] PROGMEM = {stepperStateText0, stepperStateText1, stepperStateText2, stepperStateText3, stepperStateText4, stepperStateText5};
 
 //	Encodeur
-RotationSensor encoder(rxPin, txPin, traceDebug);					// Encoder class
-uint16_t resultValue;												// Encoder last result
-unsigned long resultValueTime = 0;									// Encoder last result time
-bool encoderReading = false;										// Is encoder reading?
-unsigned long encoderReadTime = 0;									// Save encoder read time
-Modbus::ResultCode encoderLastReadError;							// Last error returned by encoder
+RotationSensor encoder(rxPin, txPin, traceDebug);		// Encoder class
+uint16_t resultValue;									// Encoder last result
+unsigned long resultValueTime = 0;						// Encoder last result time
+bool encoderReading = false;							// Is encoder reading?
+unsigned long encoderReadTime = 0;						// Save encoder read time
+Modbus::ResultCode encoderLastReadError;				// Last error returned by encoder
 
 // Lecteur MP3
 SoftwareSerial mp3Serial(mp3TxPin, mp3RxPin);			// Software serial for MP3 module
 DFRobotDFPlayerMini mp3Player;							// MP3 player class
-unsigned long playerStartedTime = 0;								// Last play time
-unsigned long playerDuration = 0;									// Play duration time
+unsigned long playerStartedTime = 0;					// Last play time
+unsigned long playerDuration = 0;						// Play duration time
 
 //	---- Print rountines ----
 
@@ -154,7 +154,7 @@ static void printInfo(const char* _format, ...) {
 	va_end(arguments);                                  // End of argument list
 	Serial.print(msg);			                        // Print on SERIAL_PORT
 	if (traceCode) {
-	events.send(msg, "info");							// Send message to destination
+		events.send(msg, "info");						// Send message to destination
 	}
 }
 
@@ -389,13 +389,13 @@ Modbus::ResultCode modbusCb(Modbus::ResultCode event, uint16_t transactionId, vo
 
 // Called at rotation begining
 void startRotation(void) {
-	digitalWrite(runPin, HIGH);										// Set rotation pin to high
-	if (rotationState == stepperStopped) {							// Are we stopped?
+	digitalWrite(runPin, HIGH);											// Set rotation pin to high
+	if (rotationState == stepperStopped) {								// Are we stopped?
 		if (requiredAngle != -1) {										// Are we in track move (instead of step move)
 			computeInertia();											// Compute inertia parameters
-		currentStepDuration = inertiaInitialStepDuration;			// Set initial step duration
+			currentStepDuration = inertiaInitialStepDuration;			// Set initial step duration
 			inertiaEndStarting = microStepsToGo - inertiaStepsStarting;	// Set number of microsteps correponding to end of starting phase
-			printInfo("Moving %ld steps, %ld (up to %ld) at %.2fms-%.2fms, normal at %.2fms, %ld stop +%.2fms to %.2fms\n",
+			printInfo("Moving %ld microsteps, %ld (up to %ld) at %.2fms-%.2fms, normal at %.2fms, %ld stop +%.2fms to %.2fms\n",
 				microStepsToGo, 
 				inertiaStepsStarting, inertiaEndStarting, currentStepDuration * 1000.0, inertiaDurationDecrement * 1000.0,
 				normalStepDuration * 1000.0,
@@ -404,26 +404,26 @@ void startRotation(void) {
 			currentStepDuration = normalStepDuration;					// Do rotation at normal speed
 			inertiaEndStarting = microStepsToGo + 1;					// Force end of accelleration greater than count of microsteps
 			inertiaStepsStopping = -1;									// Force start of decelleration after stop
-			printInfo("Moving %ld %.2fms\n",
+			printInfo("Moving %ld microsteps at %.2fms\n",
 				microStepsToGo, normalStepDuration * 1000.0);
 		}
-		rotationState = stepperRunning;								// Set to running by default
+		rotationState = stepperRunning;									// Set to running by default
 		rotationStartTime = millis();									// Set start rotation time
-		if (beforeSoundIndex) {										// Do we have a starting sound?
-			rotationState = stepperStarting;						// Set to starting
-			playerDuration = beforeSoundDuration * 1000;			// Convert duration to ms
-			playIndex(beforeSoundIndex);							// Play sound
+		if (beforeSoundIndex) {											// Do we have a starting sound?
+			rotationState = stepperStarting;							// Set to starting
+			playerDuration = beforeSoundDuration * 1000;				// Convert duration to ms
+			playIndex(beforeSoundIndex);								// Play sound
 		} else {
-			if (moveSoundIndex) {									// Do we have a rotation sound?
-				playIndex(moveSoundIndex);							// Play sound
+			if (moveSoundIndex) {										// Do we have a rotation sound?
+				playIndex(moveSoundIndex);								// Play sound
 			} else {
-				playStop();											// Stop starting sound
+				playStop();												// Stop starting sound
 			}
 		}
-	} else if (rotationState == stepperStopping) {					// Are we stopping?
-		rotationState = stepperRunning;								// Set to running again
-		if (moveSoundIndex) {										// Do we have a rotation sound?
-			playIndex(moveSoundIndex);								// Play sound
+	} else if (rotationState == stepperStopping) {						// Are we stopping?
+		rotationState = stepperRunning;									// Set to running again
+		if (moveSoundIndex) {											// Do we have a rotation sound?
+			playIndex(moveSoundIndex);									// Play sound
 		}
 	
 	} else {
@@ -590,7 +590,6 @@ void debugReceived(AsyncWebServerRequest *request) {
 	request->send(200, "application/json", String(buffer));
 }
 
-
 // Called when a /status click is received
 void statusReceived(AsyncWebServerRequest *request) {
 	// Send a json document with data correponding to current position
@@ -751,7 +750,7 @@ void setAngleReceived(AsyncWebServerRequest *request) {
 		} else {
 			// Check for track limits (as users can send this request)
 			if (track > 0 && track <= trackCount)  {
-				indexes[track] = currentAngle;							// Set current angle to track
+				indexes[track] = currentAngle;						// Set current angle to track
 				writeSettings();
 				request->send_P(200, "", "<status>Ok</status>");
 				return;
@@ -810,19 +809,19 @@ void testSoundReceived(AsyncWebServerRequest *request) {
 						playIndex(afterSoundIndex);							// Play sound
 						request->send_P(200, "", "<status>Ok</status>");
 					} else {
-			char msg[50];											// Buffer for message
+						char msg[50];										// Buffer for message
 						snprintf(msg, sizeof(msg),"<status>After sound index not defined</status>");
-			request->send_P(400, "", msg);
-			return;
-		}
+						request->send_P(400, "", msg);
+						return;
+					}
 				} else {
 					char msg[70];											// Buffer for message
 					snprintf(msg, sizeof(msg),"<status>Bad index number %d, should be 1-3</status>", index);
 					request->send_P(400, "", msg);
 					return;
-	}
+				}
 			} else {
-	char msg[50];											// Buffer for message
+				char msg[50];												// Buffer for message
 				snprintf(msg, sizeof(msg),"<status>Sound disabled</status>");
 				request->send_P(400, "", msg);
 				return;
@@ -1044,7 +1043,7 @@ void setup() {
 	Serial.print("/ or http://");
 	Serial.print(espName);
 	Serial.println("/");
-
+	
 	// OTA trace
 	ArduinoOTA.onStart(onStartOTA);
 	ArduinoOTA.onEnd(onEndOTA);
@@ -1091,7 +1090,6 @@ void setup() {
 	digitalWrite(runPin, LOW);										// Set rotation pin to low
 	pinMode(runPin, OUTPUT);										// Set rotation pin to output mode
 	
-
 	mp3Serial.begin(9600);											// Serial link with MP3 module
 	if (!mp3Serial) {												// Serial link not opened
 		printError("MP3 serial pins invalid\n");
@@ -1114,91 +1112,91 @@ void setup() {
 void loop() {
 	// Manage stepper rotation
 	StepperCommand::stepperPhases phase = stepper.stepperLoop();		// Run stepper loop
-	if (rotationState == stepperRunning) {							// Are we rotating?
+	if (rotationState == stepperRunning) {								// Are we rotating?
 		if (phase == StepperCommand::phaseEnd) {						// At end of step?
-		currentAngle = encoder.floatModuloPositive(					// Make result in range 0-360
-			currentAngle + stepper.anglePerMicroStep()				// Update current angle
-			, 360.0);
-		microStepsToGo--;											// Remove one micro step
+			currentAngle = encoder.floatModuloPositive(					// Make result in range 0-360
+				currentAngle + stepper.anglePerMicroStep()				// Update current angle
+				, 360.0);
+			microStepsToGo--;											// Remove one micro step
 			if (requiredAngle != -1) {									// Are we in track move (instead of step move)
-			if (microStepsToGo > inertiaEndStarting) {				// Are we in initial rotation?
-				currentStepDuration -= inertiaDurationDecrement;	// Decrement duration
+				if (microStepsToGo > inertiaEndStarting) {				// Are we in initial rotation?
+					currentStepDuration -= inertiaDurationDecrement;	// Decrement duration
 				} else if (microStepsToGo <= inertiaStepsStopping) {	// Are we in slowing down rotation?
-				currentStepDuration += inertiaDurationIncrement;	// Increment duration
-			} else {												// We are in full speed part
-				currentStepDuration = normalStepDuration;			// Set normal duration
+					currentStepDuration += inertiaDurationIncrement;	// Increment duration
+				} else {												// We are in full speed part
+					currentStepDuration = normalStepDuration;			// Set normal duration
+				}
 			}
-		}
-		if (!microStepsToGo) {										// Do we end rotation?
-			stopRotation();											// Stop rotation
-		}
+			if (!microStepsToGo) {										// Do we end rotation?
+				stopRotation();											// Stop rotation
+			}
 		} else if (phase == StepperCommand::phaseIdle) {				// Are we idle?
 			stepper.turnOneMicroStep(currentStepDuration);				// Turn one micro step
 		}
-	} else if (rotationState == stepperStarting) {					// Are we starting?
-		if ((millis() - playerStartedTime) > playerDuration) {		// Do we exhaust playing time?
-			if (moveSoundIndex) {									// Do we have a rotation sound?
-				playIndex(moveSoundIndex);							// Play rotation sound
+	} else if (rotationState == stepperStarting) {						// Are we starting?
+		if ((millis() - playerStartedTime) > playerDuration) {			// Do we exhaust playing time?
+			if (moveSoundIndex) {										// Do we have a rotation sound?
+				playIndex(moveSoundIndex);								// Play rotation sound
 			} else {
-				playStop();											// Stop starting sound
+				playStop();												// Stop starting sound
 			}
-			rotationState = stepperRunning;							// We're now running
+			rotationState = stepperRunning;								// We're now running
 			rotationStartTime = millis();								// Set start rotation time
 		}
-	} else if (rotationState == stepperStopping) {					// Are we stopping?
-		if ((millis() - playerStartedTime) > playerDuration) {		// Do we exhaust playing time?
-			playStop();												// Stop stopping sound
-			rotationState = stepperStopped;							// Set state to stopped
-			digitalWrite(runPin, LOW);								// Set rotation pin to low
+	} else if (rotationState == stepperStopping) {						// Are we stopping?
+		if ((millis() - playerStartedTime) > playerDuration) {			// Do we exhaust playing time?
+			playStop();													// Stop stopping sound
+			rotationState = stepperStopped;								// Set state to stopped
+			digitalWrite(runPin, LOW);									// Set rotation pin to low
 		}
-	} else if (rotationState == stepperFixing) {					// Are we fixing?
+	} else if (rotationState == stepperFixing) {						// Are we fixing?
 		if (phase == StepperCommand::phaseEnd) {						// At end of step?
-		currentAngle = encoder.floatModuloPositive(					// Make result in range 0-360
-			currentAngle + stepper.anglePerMicroStep()				// Update current angle
-			, 360.0);
-		microStepsToGo--;											// Remove one micro step
-		if (!microStepsToGo) {										// Do we end rotation?
+			currentAngle = encoder.floatModuloPositive(					// Make result in range 0-360
+				currentAngle + stepper.anglePerMicroStep()				// Update current angle
+				, 360.0);
+			microStepsToGo--;											// Remove one micro step
+			if (!microStepsToGo) {										// Do we end rotation?
 				rotationState = stepperStopped;							// Set state back to stoppeD
 			}
 		} else if (phase == StepperCommand::phaseIdle) {				// Are we idle?
 			stepper.turnOneMicroStep(inertiaFinalStepDuration);			// Turn one micro step at slow speed
 		}
-	} else if (rotationState == stepperStopped) {					// Are we stopped?
-		if (adjustPosition) {										// Is Position fixing enabled
-			fixPosition();											// Fix position
+	} else if (rotationState == stepperStopped) {						// Are we stopped?
+		if (adjustPosition) {											// Is Position fixing enabled
+			fixPosition();												// Fix position
 		}
-	} else if (rotationState == testingSound) {						// Are we testing sound?
-		if ((millis() - playerStartedTime) > playerDuration) {		// Do we exhaust playing time?
-			playStop();												// Stop playing sound
-			rotationState = stepperStopped;							// We're now stopped
+	} else if (rotationState == testingSound) {							// Are we testing sound?
+		if ((millis() - playerStartedTime) > playerDuration) {			// Do we exhaust playing time?
+			playStop();													// Stop playing sound
+			rotationState = stepperStopped;								// We're now stopped
 		}
 	}
 
 	// Manage encoder
 	if (enableEncoder) {
-		if (encoder.active()){										// Is encoder active?
-			encoder.loop();											// Give habd to encoder
+		if (encoder.active()){											// Is encoder active?
+			encoder.loop();												// Give habd to encoder
 		}
 	}
 	
-			if (enableEncoder) {									// Encoder enabled?
-		if ((millis() - encoderReadTime) > 1000) {					// Last reading more than a second?
-					encoderReading = true;							// Encoder reading
-					encoderReadTime = millis();						// Read start time
-					encoder.getAngle(&resultValue);					// Restart request
-					}
-				}
-
-	if ((millis() - resultValueTime) > 1000) {							// Last result sent more than 1 s?
-				if (abs(currentAngle - lastAngleSent) >= MIN_DELTA_ANGLE) {	// Send message only if there's a slight difference
-					// Sends an "angle" event to browser
-					char msg[10];									// Message buffer
-					snprintf_P(msg, sizeof(msg), PSTR("%.2f"), currentAngle);	// Convert angle to message
-					events.send(msg, "angle");						// Send an "angle" message
-					lastAngleSent = currentAngle;					// Save last angle sent
-				}
-				resultValueTime = millis();							// Save time of last result
+	if (enableEncoder) {												// Encoder enabled?
+		if ((millis() - encoderReadTime) > 1000) {						// Last reading more than a second?
+			encoderReading = true;										// Encoder reading
+			encoderReadTime = millis();									// Read start time
+			encoder.getAngle(&resultValue);								// Restart request
+		}
 	}
 
-	ArduinoOTA.handle();											// Give hand to OTA
+	if ((millis() - resultValueTime) > 1000) {							// Last result sent more than 1 s?
+		if (abs(currentAngle - lastAngleSent) >= MIN_DELTA_ANGLE) {		// Send message only if there's a slight difference
+			// Sends an "angle" event to browser
+			char msg[10];												// Message buffer
+			snprintf_P(msg, sizeof(msg), PSTR("%.2f"), currentAngle);	// Convert angle to message
+			events.send(msg, "angle");									// Send an "angle" message
+			lastAngleSent = currentAngle;								// Save last angle sent
+		}
+		resultValueTime = millis();										// Save time of last result
+	}
+
+	ArduinoOTA.handle();												// Give hand to OTA
 }
