@@ -195,12 +195,14 @@ void dumpSettings(void) {
 	printInfo("regId = %d\n", regId);
 	printInfo("radius = %f\n", radius);
 	printInfo("enableSound = %s\n", enableSound ? "true" : "false");
-	printInfo("soundVolume = %d\n", soundVolume);
 	printInfo("beforeSoundIndex = %d\n", beforeSoundIndex);
 	printInfo("beforeSoundDuration = %.2f\n", beforeSoundDuration);
+	printInfo("beforeSoundVolume = %d\n", beforeSoundVolume);
 	printInfo("moveSoundIndex = %d\n", moveSoundIndex);
+	printInfo("moveSoundVolume = %d\n", moveSoundVolume);
 	printInfo("afterSoundIndex = %d\n", afterSoundIndex);
 	printInfo("afterSoundDuration = %.2f\n", afterSoundDuration);
+	printInfo("afterSoundVolume = %d\n", afterSoundVolume);
 	printInfo("trackCount = %d\n", trackCount);
 	printInfo("traceDebug = %s\n", traceDebug ? "true" : "false");
 	printInfo("traceCode = %s\n", traceCode ? "true" : "false");
@@ -284,12 +286,14 @@ bool readSettings(void) {
 	espName = settings["name"].as<String>();
 	enableSound = settings["enableSound"].as<bool>();
 	enableCircles = settings["enableCircles"].as<bool>();
-	soundVolume = settings["soundVolume"].as<uint8_t>();
 	beforeSoundIndex = settings["beforeSoundIndex"].as<uint16_t>();
 	beforeSoundDuration = settings["beforeSoundDuration"].as<float>();
+	beforeSoundVolume = settings["beforeSoundVolume"].as<uint8_t>();
 	moveSoundIndex = settings["moveSoundIndex"].as<uint16_t>();
+	moveSoundVolume = settings["moveSoundVolume"].as<uint8_t>();
 	afterSoundIndex = settings["afterSoundIndex"].as<uint16_t>();
 	afterSoundDuration = settings["afterSoundDuration"].as<float>();
+    afterSoundVolume = settings["afterSoundVolume"].as<uint8_t>();
 
 	// Read "axx" variables into a table
 	char name[10];
@@ -334,12 +338,14 @@ void writeSettings(void) {
 	settings["regId"] = regId;
 	settings["radius"] = radius;
 	settings["enableSound"] = enableSound;
-	settings["soundVolume"] = soundVolume;
 	settings["beforeSoundIndex"] = beforeSoundIndex;
 	settings["beforeSoundDuration"] = beforeSoundDuration;
+	settings["beforeSoundVolume"] = beforeSoundVolume;
 	settings["moveSoundIndex"] = moveSoundIndex;
+	settings["moveSoundVolume"] = moveSoundVolume;
 	settings["afterSoundIndex"] = afterSoundIndex;
 	settings["afterSoundDuration"] = afterSoundDuration;
+	settings["afterSoundVolume"] = afterSoundVolume;
 	settings["traceDebug"] = traceDebug;
 	settings["traceCode"] = traceCode;
 	settings["traceJava"] = traceJava;
@@ -363,7 +369,6 @@ void writeSettings(void) {
 	// Reload variables into stepper, encoder and player
 	stepper.setParams(degreesPerStep, microStepsPerStep, stepperReduction, invertStepper, driverMinimalMicroSec, requiredRPM, traceDebug);
 	encoder.setParams(encoderOffsetAngle, clockwiseIncrement, traceDebug);
-	mp3Player.volume(soundVolume);
 	if (traceCode) {
 		printInfo("Sending settings event\n");
 	}
@@ -412,10 +417,10 @@ void startRotation(void) {
 		if (beforeSoundIndex) {											// Do we have a starting sound?
 			rotationState = stepperStarting;							// Set to starting
 			playerDuration = beforeSoundDuration * 1000;				// Convert duration to ms
-			playIndex(beforeSoundIndex);								// Play sound
+			playIndex(beforeSoundIndex, beforeSoundVolume);				// Play sound
 		} else {
 			if (moveSoundIndex) {										// Do we have a rotation sound?
-				playIndex(moveSoundIndex);								// Play sound
+				playIndex(moveSoundIndex, moveSoundVolume);				// Play sound
 			} else {
 				playStop();												// Stop starting sound
 			}
@@ -423,7 +428,7 @@ void startRotation(void) {
 	} else if (rotationState == stepperStopping) {						// Are we stopping?
 		rotationState = stepperRunning;									// Set to running again
 		if (moveSoundIndex) {											// Do we have a rotation sound?
-			playIndex(moveSoundIndex);									// Play sound
+			playIndex(moveSoundIndex, moveSoundVolume);					// Play sound
 		}
 	
 	} else {
@@ -440,7 +445,7 @@ void stopRotation(void) {
 	if (afterSoundIndex) {											// Do we have a stop sound?
 		rotationState = stepperStopping;							// Set to stopping
 		playerDuration = afterSoundDuration * 1000;					// Convert duration in ms
-		playIndex(afterSoundIndex);									// Play stopping sound
+		playIndex(afterSoundIndex, afterSoundVolume);				// Play stopping sound
 		return;
 	}
 	playStop();														// Stop running sound
@@ -524,7 +529,7 @@ void computeInertia() {
 //	---- MP3 player routines ----
 
 // Play a given index
-void playIndex(int index) {
+void playIndex(int index, uint8_t soundVolume) {
 	if (enableSound) {												// If sound enabled
 		/*
 		if (traceCode) {
@@ -532,6 +537,7 @@ void playIndex(int index) {
 		}
 		*/
 		playerStartedTime = millis();								// Load starting time
+        mp3Player.volume(soundVolume);                              // Set volume
 		mp3Player.play(index);										// Start playing file
 	}
 }
@@ -782,7 +788,7 @@ void testSoundReceived(AsyncWebServerRequest *request) {
 					if (beforeSoundIndex) {
 						rotationState = testingSound;						// Set to starting
 						playerDuration = beforeSoundDuration * 1000;		// Convert duration to ms
-						playIndex(beforeSoundIndex);						// Play sound
+						playIndex(beforeSoundIndex, beforeSoundVolume);		// Play sound
 						request->send_P(200, "", "<status>Ok</status>");
 					} else {
 						char msg[50];										// Buffer for message
@@ -794,7 +800,7 @@ void testSoundReceived(AsyncWebServerRequest *request) {
 					if (moveSoundIndex) {
 						rotationState = testingSound;						// Set to starting
 						playerDuration = 5 * 1000;							// Convert duration to ms
-						playIndex(moveSoundIndex);							// Play sound
+						playIndex(moveSoundIndex, moveSoundVolume);			// Play sound
 						request->send_P(200, "", "<status>Ok</status>");
 					} else {
 						char msg[50];										// Buffer for message
@@ -806,7 +812,7 @@ void testSoundReceived(AsyncWebServerRequest *request) {
 					if (afterSoundIndex) {
 						rotationState = testingSound;						// Set to starting
 						playerDuration = afterSoundDuration * 1000;			// Convert duration to ms
-						playIndex(afterSoundIndex);							// Play sound
+						playIndex(afterSoundIndex, afterSoundVolume);		// Play sound
 						request->send_P(200, "", "<status>Ok</status>");
 					} else {
 						char msg[50];										// Buffer for message
@@ -909,18 +915,22 @@ void setChangedReceived(AsyncWebServerRequest *request) {
 				adjustPosition = (fieldValue == "true");
 			} else if (fieldName == "enableSound") {
 				enableSound = (fieldValue == "true");
-			} else if (fieldName == "soundVolume") {
-				soundVolume = fieldValue.toInt();
 			} else if (fieldName == "beforeSoundIndex") {
 				beforeSoundIndex = fieldValue.toInt();
 			} else if (fieldName == "beforeSoundDuration") {
 				beforeSoundDuration = fieldValue.toFloat();
+			} else if (fieldName == "beforeSoundVolume") {
+				beforeSoundVolume = fieldValue.toInt();
 			} else if (fieldName == "moveSoundIndex") {
 				moveSoundIndex = fieldValue.toInt();
+			} else if (fieldName == "moveSoundVolume") {
+				moveSoundVolume = fieldValue.toInt();
 			} else if (fieldName == "afterSoundIndex") {
 				afterSoundIndex = fieldValue.toInt();
 			} else if (fieldName == "afterSoundDuration") {
 				afterSoundDuration = fieldValue.toFloat();
+			} else if (fieldName == "afterSoundVolume") {
+				afterSoundVolume = fieldValue.toInt();
 			} else {
 				// This is not a known field
 				printError("Can't set field %s\n", fieldName.c_str());
@@ -1099,7 +1109,6 @@ void setup() {
 				printError("Can't initialize MP3 reader");			// Show an error, else don't care as not used
 			}
 		} else {
-			mp3Player.volume(soundVolume);							// Define volume (max = 30)
 			mp3Player.enableLoop();									// Enable read loop
 		}
 	}
@@ -1136,7 +1145,7 @@ void loop() {
 	} else if (rotationState == stepperStarting) {						// Are we starting?
 		if ((millis() - playerStartedTime) > playerDuration) {			// Do we exhaust playing time?
 			if (moveSoundIndex) {										// Do we have a rotation sound?
-				playIndex(moveSoundIndex);								// Play rotation sound
+				playIndex(moveSoundIndex, moveSoundVolume);				// Play rotation sound
 			} else {
 				playStop();												// Stop starting sound
 			}

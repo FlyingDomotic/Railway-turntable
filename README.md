@@ -178,27 +178,31 @@ Un schéma d'une implementation possible est disponible dans le fichier schema.j
 
 #### Define MP3 reader parameters/Définir les paramètres du module MP3
   - Activate sound: Tick to activate sound globally.
-  - Sound volume: Give desired sound level (between 0 and 30).
   - Before rotation sound index: MP3 index to play before rotation. Set to zero if not used.
   - Before rotation sound duration (s): Duration (in seconds) of before rotation sound.
+  - Before rotation sound volume: Give desired before rotation sound level (between 0 and 30).
   - Test before rotation sound: play sound specified in "Before rotation sound index" for "Before rotation sound duration" seconds.
   - During rotation sound index: MP3 index to play during rotation. Set to zero if not used.
+  - During rotation sound volume: Give desired during rotation sound level (between 0 and 30).
   - Test during rotation sound: play sound specified in "During rotation sound index" for 5 seconds.
   - After rotation sound index: MP3 index to play after rotation. Set to zero if not used.
   - After rotation sound duration (s): Duration (in seconds) of after rotation sound.
+  - After rotation sound volume: Give desired after rotation sound level (between 0 and 30).
   - Test after rotation sound: play sound specified in "After rotation sound index" for "After rotation sound duration" seconds.
 
 Note: MP3 files should be written in /MP3 folder on SD card. Filenames should be from 0001.mp3 to 9999.mp3
 
   - Activer le son : Cocher pour activer le son globalement.
-  - Volume sonore : Indiquer le volume sonore désiré (entre 0 et 30).
   - Index son avant rotation : Index du MP3 à lire avant la rotation. Mettre à zéro si non utilisé.
   - Durée son avant rotation (s) : Durée (en secondes) de lecture du son avant la rotation.
+  - Volume son avant rotation : Indiquer le volume sonore avant rotation désiré (entre 0 et 30).
   - Tester le son avant rotation : jour le son spécifié dans "Index son avant rotation" pendant "Durée son avant rotation" secondes.
   - Index son pendant rotation : Index du MP3 à lire pendant la rotation. Mettre à zéro si non utilisé.
+  - Volume son pendant rotation : Indiquer le volume sonore pendant avant rotation désiré (entre 0 et 30).
   - Tester le son pendant rotation : jour le son spécifié dans "Index son pendant rotation" pendant 5 secondes.
   - Index son après rotation : Index du MP3 à lire avant la rotation. Mettre à zéro si non utilisé.
   - Durée son après rotation (s) : Durée (en secondes) de lecture du son après la rotation.
+  - Volume son après rotation : Indiquer le volume sonore après rotation désiré (entre 0 et 30).
   - Tester le son après rotation : jour le son spécifié dans "Index son après rotation" pendant "Durée son après rotation" secondes.
 
 Note: Les fichiers MP3 doivent être écrits dans le répertoire /MP3 de la carte SD. Les noms doivent être compris entre 0001.mp3 et 9999.mp3.

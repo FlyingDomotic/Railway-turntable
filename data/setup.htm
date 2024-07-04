@@ -116,12 +116,14 @@
 			<label data-i18n-key="enableCircles">Show track number in circle</label>&nbsp;<input type="checkbox" id="enableCircles" onchanges="changed(this);"><br>
 			<hr />
 			<label data-i18n-key="enableSound">Activate sound</label>&nbsp;<input type="checkbox" id="enableSound" onchange="changed(this);"><br>
-			<label data-i18n-key="soundVolume">Sound volume:</label>&nbsp;<input type="number" id="soundVolume" min="1" max="30" style="width:60px" onchange="changed(this);"><br>
+			<label data-i18n-key="beforeSoundVolume">Before sound volume:</label>&nbsp;<input type="number" id="beforeSoundVolume" min="1" max="30" style="width:60px" onchange="changed(this);"><br>
 			<label data-i18n-key="beforeSoundIndex">Before rotation sound index:</label>&nbsp;<input type="number" id="beforeSoundIndex" min="0" max="256" style="width:60px" onchange="changed(this);"><br>
 			<label data-i18n-key="beforeSoundDuration">Before rotation sound rotation:</label>&nbsp;<input type="number" id="beforeSoundDuration" min="0.1" max="10" style="width:60px" onchange="changed(this);"><br>
 			<input type="button" style="width:200px" data-i18n-key="testBeforeSound" value="Test before rotaton sound" onclick="testSound(1);"/><br>
+			<label data-i18n-key="moveSoundVolume">Before sound volume:</label>&nbsp;<input type="number" id="moveSoundVolume" min="1" max="30" style="width:60px" onchange="changed(this);"><br>
 			<label data-i18n-key="moveSoundIndex">During rotation sound index:</label>&nbsp;<input type="number" id="moveSoundIndex" min="0" max="256" style="width:60px" onchange="changed(this);"><br>
 			<input type="button" style="width:200px" data-i18n-key="testDuringSound" value="Test during rotation sound" onclick="testSound(2);"/><br>
+			<label data-i18n-key="afterSoundVolume">Before sound volume:</label>&nbsp;<input type="number" id="afterSoundVolume" min="1" max="30" style="width:60px" onchange="changed(this);"><br>
 			<label data-i18n-key="afterSoundIndex">After rotation sound index:</label>&nbsp;<input type="number" id="afterSoundIndex" min="0" max="256" style="width:60px" onchange="changed(this);"><br>
 			<label data-i18n-key="afterSoundDuration">After rotation sound duration:</label>&nbsp;<input type="number" id="afterSoundDuration" min="0.1" max="10" style="width:60px" onchange="changed(this);"><br>
 			<input type="button" style="width:200px" data-i18n-key="testAfterSound" value="Test after rotation sound" onclick="testSound(3);"/><br>

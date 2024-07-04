@@ -29,12 +29,14 @@ float radius = 47.0;					// Radius of track marks (and click proximity)
 uint8_t trackCount = 1;					// Count of tracks
 bool enableSound = false;				// Globally enable sound
 bool enableCircles = false;				// Enable tracks circles
-uint8_t soundVolume = 10;				// Sound volume (max 30)
 uint16_t beforeSoundIndex = 0;			// Before move sound index
 float beforeSoundDuration = 0.0;		// Before move sound duration (seconds)
+uint8_t beforeSoundVolume = 10;			// Before sound volume (max 30)
 uint16_t moveSoundIndex = 0;			// Move sound index
+uint8_t moveSoundVolume = 10;			// Move sound volume (max 30)
 uint16_t afterSoundIndex = 0;			// After move sound index
 float afterSoundDuration = 0.0;			// After move sound duration
+uint8_t afterSoundVolume = 10;			// After sound volume (max 30)
 #define POSITION_COUNT 36				// Maximum number of tracks
 float indexes[POSITION_COUNT+1];		// Angles of each index
 float inertiaFactorStarting = 1.0;		// Divide speed by this number when starting
