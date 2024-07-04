@@ -190,7 +190,7 @@ Un schéma d'une implementation possible est disponible dans le fichier schema.j
   - After rotation sound volume: Give desired after rotation sound level (between 0 and 30).
   - Test after rotation sound: play sound specified in "After rotation sound index" for "After rotation sound duration" seconds.
 
-Note: MP3 files should be written in /MP3 folder on SD card. Filenames should be from 0001.mp3 to 9999.mp3
+Note: MP3 files should be written in /MP3 folder on SD card. Filenames should be from 0001.mp3 to 9999.mp3. Examples are provided in /examples/MP3/. You can test them.
 
   - Activer le son : Cocher pour activer le son globalement.
   - Index son avant rotation : Index du MP3 à lire avant la rotation. Mettre à zéro si non utilisé.
@@ -205,7 +205,7 @@ Note: MP3 files should be written in /MP3 folder on SD card. Filenames should be
   - Volume son après rotation : Indiquer le volume sonore après rotation désiré (entre 0 et 30).
   - Tester le son après rotation : jour le son spécifié dans "Index son après rotation" pendant "Durée son après rotation" secondes.
 
-Note: Les fichiers MP3 doivent être écrits dans le répertoire /MP3 de la carte SD. Les noms doivent être compris entre 0001.mp3 et 9999.mp3.
+Note: Les fichiers MP3 doivent être écrits dans le répertoire /MP3 de la carte SD. Les noms doivent être compris entre 0001.mp3 et 9999.mp3. Des exemples sont disponibles dans le répertoire /examples/MP3/. Vous pouvez les tester.
 
 #### Define network parameters/Définir les paramètres réseau
   - Wifi SSID: Give Wifi existing SSId to use. If empty a "PontTournant_XXXXXX" private access point will be created.
