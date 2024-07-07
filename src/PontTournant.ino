@@ -396,22 +396,14 @@ Modbus::ResultCode modbusCb(Modbus::ResultCode event, uint16_t transactionId, vo
 void startRotation(void) {
 	digitalWrite(runPin, HIGH);											// Set rotation pin to high
 	if (rotationState == stepperStopped) {								// Are we stopped?
-		if (requiredAngle != -1) {										// Are we in track move (instead of step move)
-			computeInertia();											// Compute inertia parameters
-			currentStepDuration = inertiaInitialStepDuration;			// Set initial step duration
-			inertiaEndStarting = microStepsToGo - inertiaStepsStarting;	// Set number of microsteps correponding to end of starting phase
-			printInfo("Moving %ld microsteps, %ld (up to %ld) at %.2fms-%.2fms, normal at %.2fms, %ld stop +%.2fms to %.2fms\n",
-				microStepsToGo, 
-				inertiaStepsStarting, inertiaEndStarting, currentStepDuration * 1000.0, inertiaDurationDecrement * 1000.0,
-				normalStepDuration * 1000.0,
-				inertiaStepsStopping, inertiaDurationIncrement * 1000.0, inertiaFinalStepDuration * 1000.0);
-		} else {
-			currentStepDuration = normalStepDuration;					// Do rotation at normal speed
-			inertiaEndStarting = microStepsToGo + 1;					// Force end of accelleration greater than count of microsteps
-			inertiaStepsStopping = -1;									// Force start of decelleration after stop
-			printInfo("Moving %ld microsteps at %.2fms\n",
-				microStepsToGo, normalStepDuration * 1000.0);
-		}
+        computeInertia();											// Compute inertia parameters
+        currentStepDuration = inertiaInitialStepDuration;			// Set initial step duration
+        inertiaEndStarting = microStepsToGo - inertiaStepsStarting;	// Set number of microsteps correponding to end of starting phase
+        printInfo("Moving %ld microsteps, %ld (up to %ld) at %.2fms-%.2fms, normal at %.2fms, %ld stop +%.2fms to %.2fms\n",
+            microStepsToGo, 
+            inertiaStepsStarting, inertiaEndStarting, currentStepDuration * 1000.0, inertiaDurationDecrement * 1000.0,
+            normalStepDuration * 1000.0,
+            inertiaStepsStopping, inertiaDurationIncrement * 1000.0, inertiaFinalStepDuration * 1000.0);
 		rotationState = stepperRunning;									// Set to running by default
 		rotationStartTime = millis();									// Set start rotation time
 		if (beforeSoundIndex) {											// Do we have a starting sound?
@@ -486,6 +478,7 @@ void fixPosition(void){
 			microStepsToGo = stepper.microStepsForAngle(deltaAngle);// Compute micro steps to move
 			if (microStepsToGo) {									// Do we have to move?
 				rotationState = stepperFixing;						// Set proper state
+                currentStepDuration = normalStepDuration;           // At normal speed
 				if (traceCode) {
 					printInfo("Fix: Current angle = %.2f, required angle = %.2f, delta angle = %.2f, micro step count = %ld, angle per micro step = %.2f\n", currentAngle, requiredAngle, deltaAngle, microStepsToGo, stepper.anglePerMicroStep());
 				}
@@ -676,23 +669,31 @@ void clickReceived(AsyncWebServerRequest *request) {
 
 // Called when /move/<micro step count> received
 void moveReceived(AsyncWebServerRequest *request) {
+	char msg[70];                                                       // Buffer for message
+
 	String position = request->url().substring(1);
 	if (traceCode) {
 		printInfo("Received %s\n", position.c_str());
 	}
 	int separator1 = position.indexOf("/");								// Position of first "/"
 	if (separator1 >= 0) {
-		// Extract micro step (signed) count and move
-		int16_t count = position.substring(separator1+1).toInt();
-		stepper.setDirection(count);
-		microStepsToGo = abs(count);
-		requiredAngle = -1;
-		startRotation();
-		char msg[50];											// Buffer for message
-		snprintf(msg, sizeof(msg),"<status>Ok, moving %d micro steps</status>", count);
-		request->send_P(200, "", msg);
+        if (rotationState == stepperStopped) {		                    // Only if stepper stopped
+            // Extract micro step (signed) count and move
+            int16_t count = position.substring(separator1+1).toInt();
+            requiredAngle = -1;                                         // Force to -1 to disable fixing after move
+            stepper.setDirection(count);
+            microStepsToGo = abs(count);
+            rotationState = stepperFixing;
+            currentStepDuration = normalStepDuration;           // At normal speed
+            snprintf(msg, sizeof(msg),"<status>Ok, moving %d micro steps</status>", count);
+            request->send_P(200, "", msg);
+        } else {
+            snprintf(msg, sizeof(msg),"<status>Can't move while stepper is not stopped</status>");
+            request->send_P(400, "", msg);
+        }
+        return;
 	}
-	char msg[70];											// Buffer for message
+
 	snprintf(msg, sizeof(msg),"<status>Can't understand %s</status>", request->url().c_str());
 	request->send_P(400, "", msg);
 }
@@ -1127,15 +1128,13 @@ void loop() {
 				currentAngle + stepper.anglePerMicroStep()				// Update current angle
 				, 360.0);
 			microStepsToGo--;											// Remove one micro step
-			if (requiredAngle != -1) {									// Are we in track move (instead of step move)
-				if (microStepsToGo > inertiaEndStarting) {				// Are we in initial rotation?
-					currentStepDuration -= inertiaDurationDecrement;	// Decrement duration
-				} else if (microStepsToGo <= inertiaStepsStopping) {	// Are we in slowing down rotation?
-					currentStepDuration += inertiaDurationIncrement;	// Increment duration
-				} else {												// We are in full speed part
-					currentStepDuration = normalStepDuration;			// Set normal duration
-				}
-			}
+            if (microStepsToGo > inertiaEndStarting) {				// Are we in initial rotation?
+                currentStepDuration -= inertiaDurationDecrement;	// Decrement duration
+            } else if (microStepsToGo <= inertiaStepsStopping) {	// Are we in slowing down rotation?
+                currentStepDuration += inertiaDurationIncrement;	// Increment duration
+            } else {												// We are in full speed part
+                currentStepDuration = normalStepDuration;			// Set normal duration
+            }
 			if (!microStepsToGo) {										// Do we end rotation?
 				stopRotation();											// Stop rotation
 			}
