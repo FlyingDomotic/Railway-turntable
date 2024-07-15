@@ -48,7 +48,7 @@ function loadSettings(loadHtml) {
 							// Load angle
 							document.getElementById(key).value = roundOf(jsonData[key],2)+"°";
 						// For trace and enable elements (checkboxes)
-						} else if (key.substring(0,5) == "trace" || key.substring(0,6) == "enable") {
+						} else if (key.substring(0,5) == "trace" || key.substring(0,6) == "enable" || key.substring(0,3) == "led") {
 							document.getElementById(key).checked = (String(jsonData[key]).toLowerCase() == "true");
 						// For other elements
 						} else {

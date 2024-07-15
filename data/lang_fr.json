@@ -23,6 +23,7 @@
     "inertiaFactorStopping": "Facteur inertiel à l'arrêt",
     "invertStepper": "Inverser le sens du moteur",
     "languageSelector": "Langue",
+    "ledOnWhenHigh": "Allumer la LED de rotation sur signal haut",
     "maxDelta": "Largeur des zones sensibles :",
     "microStepsPerStep": "Micro-pas par pas :",
     "moveSoundIndex": "Index son pendant rotation :",

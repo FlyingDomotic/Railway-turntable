@@ -7,7 +7,7 @@
  *		Stepper with driver (enable/pulse/direction) (for example NEMA 24 with DM556T)
  *		RS485 aboslute encoder (for example QY3806-485RTU)
  *		Serial/RS485 adapter
- *		DFPlayer mini MP3 player (optional)
+ *		DF-SV17A MP3 player (optional)
  *		Rotation LED (optional)
  *
  *	Matériel
@@ -15,15 +15,14 @@
  *		Moteur pas à pas avec driver (enable/pulse/direction) (par exemple NEMA 24 avec DM556T)
  *		Encodeur absolu RS485 (par exemple QY3806-485RTU)
  *		Adaptateur série/RS485
- *		Lecteur MP3 DFPlayer mini (optionnel)
+ *		Lecteur MP3 DF-SV17A (optionnel)
  *		LED de rotation (optionnel)
  *
  *	Connections
  *		By default, the following pins are defined in preference.h file:
  *			D0 (enablePin) : Stepper enable signal
- *			D1 (mp3TxPin) : MP3 TX pin
- *			D2 (mp3RxPin) : MP3 RX pin
- *			D3 (runPin) : Set to high during rotation (LED command)
+ *			D3 (mp3Pin) : MP3 one-line pin
+ *			D4 (runPin) : Rotation in progress LED pin
  *			D5 (rxPin) : RS485 RX pin
  *			D6 (txPin) : RS485 TX pin
  *			D7 (pulsePin) : Stepper pulse signal
@@ -32,9 +31,8 @@
  *	Connexions
  *		Par défaut, les pinoches suivantes sont définies dans le fichier preference.h :
  *			D0 (enablePin) : Signal enable du moteur
- *			D1 (mp3TxPin) : MP3 TX pin
- *			D2 (mp3RxPin) : MP3 RX pin
- *			D3 (runPin) : Haut pendant la rotation (commande LED)
+ *			D3 (mp3Pin) : Pinoche du module MP3 DF-SV17A
+ *			D4 (runPin) : Pinoche de la LED d'indication de rotation
  *			D5 (rxPin) : RX du module RS485
  *			D6 (txPin) : TX du module RS485
  *			D7 (pulsePin) : Signal pulse du moteur
@@ -60,7 +58,7 @@
  *		/tstsnd/<x>	Testele son <x>, 1=avant rotation, 2=pendant rotation and 3=après rotation
  *		/debug		Affiche les variables internes pour déverminer
  *
- *	V1.0.0 FF - Mars 2024 - For Fablab/Pour le FabLab
+ *	V2.1.5 FF - Juillet 2024 - For Fablab/Pour le FabLab
  *
  *	GNU GENERAL PUBLIC LICENSE - Version 3, 29 June 2007
  *
@@ -73,12 +71,11 @@
 #include <preferences.h>											// Turn table preferences
 #include <stepperCommand.h>											// Stepper
 #include <rotationSensor.h>											// Encoder
-#include <DFRobotDFPlayerMini.h>									// DFPlayer mini MP3 player
+#include <mp3_player_module_wire.h>									// DFPlayer mini MP3 player
 #include <cmath>													// Math functions
 #include <LittleFS.h>												// Flash dile system
 #include <littleFsEditor.h>											// LittleFS file system editor
 #include <ArduinoJson.h>											// JSON documents
-#include <SoftwareSerial.h>											// Soft serial (for MP3 reader)
 
 //	---- Variables ----
 
@@ -138,8 +135,7 @@ unsigned long encoderReadTime = 0;						// Save encoder read time
 Modbus::ResultCode encoderLastReadError;				// Last error returned by encoder
 
 // Lecteur MP3
-SoftwareSerial mp3Serial(mp3TxPin, mp3RxPin);			// Software serial for MP3 module
-DFRobotDFPlayerMini mp3Player;							// MP3 player class
+Mp3PlayerModuleWire mp3Player(mp3Pin);					// MP3 module one-line protocol
 unsigned long playerStartedTime = 0;					// Last play time
 unsigned long playerDuration = 0;						// Play duration time
 
@@ -186,6 +182,7 @@ void dumpSettings(void) {
 	printInfo("inertiaAngleStopping = %.2f\n", inertiaAngleStopping);
 	printInfo("inertiaFactorStarting = %.2f\n", inertiaFactorStarting);
 	printInfo("inertiaFactorStopping = %.2f\n", inertiaFactorStopping);
+    printInfo("ledOnWhenHigh = %s\n", ledOnWhenHigh ? "true" : "false");
 	printInfo("maxDelta = %d\n", maxDelta);
 	printInfo("encoderOffsetAngle = %.2f\n", encoderOffsetAngle);
 	printInfo("clockwiseIncrement = %s\n", clockwiseIncrement ? "true" : "false");
@@ -328,6 +325,7 @@ void writeSettings(void) {
 	settings["inertiaAngleStopping"] = inertiaAngleStopping;
 	settings["inertiaFactorStarting"] = inertiaFactorStarting;
 	settings["inertiaFactorStopping"] = inertiaFactorStopping;
+    settings["ledOnWhenHigh"] = ledOnWhenHigh;
 	settings["maxDelta"] = maxDelta;
 	settings["enableEncoder"] = enableEncoder;
 	settings["adjustPosition"] = adjustPosition;
@@ -394,8 +392,8 @@ Modbus::ResultCode modbusCb(Modbus::ResultCode event, uint16_t transactionId, vo
 
 // Called at rotation begining
 void startRotation(void) {
-	digitalWrite(runPin, HIGH);											// Set rotation pin to high
-	if (rotationState == stepperStopped) {								// Are we stopped?
+	digitalWrite(runPin, ledOnWhenHigh ? HIGH : LOW);				// Set rotation pin to ON
+	if (rotationState == stepperStopped) {							// Are we stopped?
         computeInertia();											// Compute inertia parameters
         currentStepDuration = inertiaInitialStepDuration;			// Set initial step duration
         inertiaEndStarting = microStepsToGo - inertiaStepsStarting;	// Set number of microsteps correponding to end of starting phase
@@ -442,7 +440,7 @@ void stopRotation(void) {
 	}
 	playStop();														// Stop running sound
 	rotationState = stepperStopped;									// Force to stopped
-	digitalWrite(runPin, LOW);										// Put rotation pin to low
+	digitalWrite(runPin, ledOnWhenHigh ? LOW: HIGH);				// Set rotation pin to OFF
 }
 
 // Move turntable to a given track
@@ -526,12 +524,13 @@ void playIndex(int index, uint8_t soundVolume) {
 	if (enableSound) {												// If sound enabled
 		/*
 		if (traceCode) {
-			printInfo("Playing file %d\n", index);
+			printInfo("Playing file %d, level %d\n", index, soundVolume);
 		}
 		*/
 		playerStartedTime = millis();								// Load starting time
-        mp3Player.volume(soundVolume);                              // Set volume
-		mp3Player.play(index);										// Start playing file
+        mp3Player.set_volume(soundVolume);							// Set volume
+		mp3Player.set_track_index(index);                           // Set file index
+        mp3Player.play();											// Start playing file
 	}
 }
 
@@ -890,6 +889,8 @@ void setChangedReceived(AsyncWebServerRequest *request) {
 				inertiaFactorStarting = fieldValue.toFloat();
 			} else if (fieldName == "inertiaFactorStopping") {
 				inertiaFactorStopping = fieldValue.toFloat();
+			} else if (fieldName == "ledOnWhenHigh") {
+				ledOnWhenHigh = (fieldValue == "true");
 			} else if (fieldName == "slaveId") {
 				slaveId = fieldValue.toInt();
 			} else if (fieldName == "regId") {
@@ -1098,21 +1099,11 @@ void setup() {
 
 	stepper.begin();												// Stepper init
 
-	digitalWrite(runPin, LOW);										// Set rotation pin to low
+	digitalWrite(runPin, ledOnWhenHigh ? LOW: HIGH);				// Set rotation pin to OFF
 	pinMode(runPin, OUTPUT);										// Set rotation pin to output mode
 	
-	mp3Serial.begin(9600);											// Serial link with MP3 module
-	if (!mp3Serial) {												// Serial link not opened
-		printError("MP3 serial pins invalid\n");
-	} else {
-		if (!mp3Player.begin(mp3Serial, false, true)) {				// Use serial to communicate with mp3, disable ACK, enable reset
-			if (enableSound) {										// If sound is enabled
-				printError("Can't initialize MP3 reader");			// Show an error, else don't care as not used
-			}
-		} else {
-			mp3Player.enableLoop();									// Enable read loop
-		}
-	}
+	mp3Player.set_storage(mp3Player.STORAGE_FLASH);					// Use files in flash (should be downloaded before using USB)
+	mp3Player.set_play_mode(mp3Player.PLAY_TRACK_REPEAT);           // Repeat track forever
 
 	encoder.setCallback(modbusCb);									// Modbus end request callback
 	encoder.begin();												// Encoder init
@@ -1155,7 +1146,7 @@ void loop() {
 		if ((millis() - playerStartedTime) > playerDuration) {			// Do we exhaust playing time?
 			playStop();													// Stop stopping sound
 			rotationState = stepperStopped;								// Set state to stopped
-			digitalWrite(runPin, LOW);									// Set rotation pin to low
+        	digitalWrite(runPin, ledOnWhenHigh ? LOW: HIGH);			// Set rotation pin to OFF
 		}
 	} else if (rotationState == stepperFixing) {						// Are we fixing?
 		if (phase == StepperCommand::phaseEnd) {						// At end of step?

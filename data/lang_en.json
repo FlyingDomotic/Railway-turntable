@@ -23,6 +23,7 @@
     "inertiaFactorStopping": "Inertia factor when stopping",
     "invertStepper": "Invert stepper rotation",
     "languageSelector": "Language",
+    "ledOnWhenHigh": "Light rotation LED on high signal",
     "maxDelta": "Sensitive zones width:",
     "microStepsPerStep": "Microsteps per step:",
     "moveSoundIndex": "During rotation sound index:",

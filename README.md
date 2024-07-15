@@ -50,7 +50,7 @@ Connection between ESP and rotary encoder is done by a simple RS485/TTL interfac
 
 An optional optocoupler is also available to connect a LED to signal turntable rotation. It can driver/be replaced by a relay if current is important.
 
-An optional MP3 reader, based on DFPlayer Mini MP3 Player cr hip. It will allow to play a start sound during a settable time, a rotation sound, as long as turntable turns, and a stop sound during a settable time (all optional).
+An optional MP3 reader, based on a DY-SV17A module. It will allow to play a start sound during a settable time, a rotation sound, as long as turntable turns, and a stop sound during a settable time (all optional).
 
 To make turntable more realistic, inertia is simulated when starting rotation and/or another when stoppoing it.
 
@@ -58,7 +58,7 @@ La connexion entre l'ESP et le capteur de rotation est réalisée par un module 
 
 Un optocoupleur est également disponible pour connecter une LED de rotation (optionnel). Il peut commander/être remplacé par un relai si le courant à commuter est important.
 
-Un lecteur MP3, basé sur un chip DFPlayer Mini MP3 Player peut également être ajouté (optionnel). Il permet de jouer un son de démarrage pendant une durée paramétrable, un son de rotation tant que le pont tourne, et un son d'arrêt pendant une durée paramétrable (tous optionnels).
+Un lecteur MP3, basé sur un module DY-SV17A peut également être ajouté (optionnel). Il permet de jouer un son de démarrage pendant une durée paramétrable, un son de rotation tant que le pont tourne, et un son d'arrêt pendant une durée paramétrable (tous optionnels).
 
 Pour rendre le pont tournant plus réaliste, une inertie est simulée lorsqu'on démarre le pont et/ou une seconde lorsqu'on l'arrête.
 
@@ -89,8 +89,8 @@ git clone https://github.com/FlyingDomotic/Railway-turntable railwayTurntable
    - Stepper direction optocoupler is connected to D8
    - RS485 RX signal is connected to D5
    - RS485 TX signal is connected to D6
-   - Optional rotation LED optocoupler (or relay) is connected to D3
-   - Optional MP3 module (serial) is connected to D1 (TX) and D2 (RX)
+   - Optional rotation LED optocoupler (or relay) is connected to D4
+   - Optional MP3 module (one line) is connected on D3
 3. Compile and load code into ESP.
 4. Load data folder into ESP flash.
 5. Start ESP and connect to Wifi SSID "PontTournant_XXXXXX" (where XXXXXX represent ESP chip ID)
@@ -111,8 +111,8 @@ git clone https://github.com/FlyingDomotic/Railway-turntable railwayTurntable
    - L'optocoupleur "direction" à D8
    - Le signal RX du module RS485 à D5
    - Le signal TX du module RS485 à D6
-   - Le module MP3 optionnel à D1 (TX) et D2 (RX)
-   - l'optocoupleur (ou le relais) de la LED de rotation optionnelle à D3.
+   - Le module MP3 optionnel à D3
+   - l'optocoupleur (ou le relais) de la LED de rotation optionnelle à D4.
 3. Compiler et charger le code dans l'ESP.
 4. Charger le contenu du répertoire "data" dans la flash de l'ESP.
 5. Démarrer l'ESP et se connecter au SSID Wifi SSID "PontTournant_XXXXXX" (où XXXXXX représente l'ID du chip ESP)
@@ -141,7 +141,7 @@ Un schéma d'une implementation possible est disponible dans le fichier schema.j
   - Inertia factor when stopping: end rotation with speed equal to RPM divided by this number when simulating inertia. Set to 1 to ignore stopping inertia.
   - Angle before slowing down: angle, in degree, to decelerate from normal RPM to ending speed. Set to zero to ignore ending inertia.
   - Adjust position: permanently read turntable position and realign it with required angle when selected.
-
+  - Light rotation LED on high signal: light rotation LED when signal is high. To be set to false when using D4 internal LED which is turned ON on low signal.
   - Degrés par pas : Indiquer le nombre de degrés correspondant à 1 pas. Par exemple, un moteur avec 200 pas par tour fera 200/360 = 1,8° par pas.
   - Micro-pas par pas : Indiquer le nombre de micro-pas par pas. Dépend des réglages du driver. Voir la doc du driver et reporter la valeur choisie sur le driver.
   - Réduction moteur : nombre de tours du moteur pour un tour du pont (1.0 s'il n'y a pas de réducteur, 3.0 si 3 pas du moteur sont nécessaires pour avoir un pas sur le pont).
@@ -153,6 +153,7 @@ Un schéma d'une implementation possible est disponible dans le fichier schema.j
   - Angle avant ralentissement : angle, en degrés, pour freiner de la vitesse normale à la vitesse d'arrêt. Mettre à 0 pour ignorer l'inertie au démarrage.
   - Inverser le sens du moteur : cocher pour inverser le sens de rotation fu moteur ;-)
   - Ajuster la position : lit en permanence la position du pont et la réaligne avec l'angle demandé si coché.
+  - Allumer la LED de rotation sur signal haut : allume la LED de rotation sur un signal haut. A décocher lorsqu'on utilise la LED interne sur D4 qui est active à l'état bas.
 
 #### Define encoder parameters/Définir les paramètres de l'encodeur
   - Use encoder: Tick to use encoder. If unselected, system should be manually positioned on track #1 when starting. Turntable angle will be computed instead of being read on encoder.
@@ -190,7 +191,7 @@ Un schéma d'une implementation possible est disponible dans le fichier schema.j
   - After rotation sound volume: Give desired after rotation sound level (between 0 and 30).
   - Test after rotation sound: play sound specified in "After rotation sound index" for "After rotation sound duration" seconds.
 
-Note: MP3 files should be written in /MP3 folder on SD card. Filenames should be from 0001.mp3 to 9999.mp3. Examples are provided in /examples/MP3/. You can test them.
+Note: MP3 files should be written in root folder on MP3 module's flash. This is done connecting module through USB to a PC with an USB cable, using file manager or shell commands to transfer files. Filenames should be from 00001.mp3 to 65535.mp3. Examples are provided in /examples/MP3/. You can test them.
 
   - Activer le son : Cocher pour activer le son globalement.
   - Index son avant rotation : Index du MP3 à lire avant la rotation. Mettre à zéro si non utilisé.
@@ -205,7 +206,7 @@ Note: MP3 files should be written in /MP3 folder on SD card. Filenames should be
   - Volume son après rotation : Indiquer le volume sonore après rotation désiré (entre 0 et 30).
   - Tester le son après rotation : jour le son spécifié dans "Index son après rotation" pendant "Durée son après rotation" secondes.
 
-Note: Les fichiers MP3 doivent être écrits dans le répertoire /MP3 de la carte SD. Les noms doivent être compris entre 0001.mp3 et 9999.mp3. Des exemples sont disponibles dans le répertoire /examples/MP3/. Vous pouvez les tester.
+Note: Les fichiers MP3 doivent être écrits dans le répertoire racine de la flash du module MP3. La copie se fait en connectant le module à un PC avec un câble USB, en utilisant un gestionnaire de fichiers ou des commandes shell. Les noms doivent être compris entre 00001.mp3 et 65535.mp3. Des exemples sont disponibles dans le répertoire /examples/MP3/. Vous pouvez les tester.
 
 #### Define network parameters/Définir les paramètres réseau
   - Wifi SSID: Give Wifi existing SSId to use. If empty a "PontTournant_XXXXXX" private access point will be created.
