@@ -1,8 +1,8 @@
 #include <arduino.h>					// Arduino
 
 uint8_t enablePin = D0;					// Pin where stepper enable signal is connected to
+uint8_t runPin = D2;					// Pin where rotation LED is connected to
 uint8_t mp3Pin = D3;					// Pin where MP3 module is connected to (oneline protocol)
-uint8_t runPin = D4;					// Pin where rotation LED is connected to
 uint8_t rxPin = D5;						// Pin where RS485 RX signal is connected to
 uint8_t txPin = D6;						// Pin where RS485 TX signal is connected to
 uint8_t pulsePin = D7;					// Pin where stepper pulse signal is connected to

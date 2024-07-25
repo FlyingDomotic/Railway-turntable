@@ -89,7 +89,7 @@ git clone https://github.com/FlyingDomotic/Railway-turntable railwayTurntable
    - Stepper direction optocoupler is connected to D8
    - RS485 RX signal is connected to D5
    - RS485 TX signal is connected to D6
-   - Optional rotation LED optocoupler (or relay) is connected to D4
+   - Optional rotation LED optocoupler (or relay) is connected to D2
    - Optional MP3 module (one line) is connected on D3
 3. Compile and load code into ESP.
 4. Load data folder into ESP flash.
@@ -112,7 +112,7 @@ git clone https://github.com/FlyingDomotic/Railway-turntable railwayTurntable
    - Le signal RX du module RS485 à D5
    - Le signal TX du module RS485 à D6
    - Le module MP3 optionnel à D3
-   - l'optocoupleur (ou le relais) de la LED de rotation optionnelle à D4.
+   - l'optocoupleur (ou le relais) de la LED de rotation optionnelle à D2.
 3. Compiler et charger le code dans l'ESP.
 4. Charger le contenu du répertoire "data" dans la flash de l'ESP.
 5. Démarrer l'ESP et se connecter au SSID Wifi SSID "PontTournant_XXXXXX" (où XXXXXX représente l'ID du chip ESP)
@@ -141,7 +141,7 @@ Un schéma d'une implementation possible est disponible dans le fichier schema.j
   - Inertia factor when stopping: end rotation with speed equal to RPM divided by this number when simulating inertia. Set to 1 to ignore stopping inertia.
   - Angle before slowing down: angle, in degree, to decelerate from normal RPM to ending speed. Set to zero to ignore ending inertia.
   - Adjust position: permanently read turntable position and realign it with required angle when selected.
-  - Light rotation LED on high signal: light rotation LED when signal is high. To be set to false when using D4 internal LED which is turned ON on low signal.
+  - Light rotation LED on high signal: light rotation LED when signal is high. To be set to false when using D2 internal LED which is turned ON on low signal.
   - Degrés par pas : Indiquer le nombre de degrés correspondant à 1 pas. Par exemple, un moteur avec 200 pas par tour fera 200/360 = 1,8° par pas.
   - Micro-pas par pas : Indiquer le nombre de micro-pas par pas. Dépend des réglages du driver. Voir la doc du driver et reporter la valeur choisie sur le driver.
   - Réduction moteur : nombre de tours du moteur pour un tour du pont (1.0 s'il n'y a pas de réducteur, 3.0 si 3 pas du moteur sont nécessaires pour avoir un pas sur le pont).
@@ -153,7 +153,7 @@ Un schéma d'une implementation possible est disponible dans le fichier schema.j
   - Angle avant ralentissement : angle, en degrés, pour freiner de la vitesse normale à la vitesse d'arrêt. Mettre à 0 pour ignorer l'inertie au démarrage.
   - Inverser le sens du moteur : cocher pour inverser le sens de rotation fu moteur ;-)
   - Ajuster la position : lit en permanence la position du pont et la réaligne avec l'angle demandé si coché.
-  - Allumer la LED de rotation sur signal haut : allume la LED de rotation sur un signal haut. A décocher lorsqu'on utilise la LED interne sur D4 qui est active à l'état bas.
+  - Allumer la LED de rotation sur signal haut : allume la LED de rotation sur un signal haut. A décocher lorsqu'on utilise la LED interne sur D2 qui est active à l'état bas.
 
 #### Define encoder parameters/Définir les paramètres de l'encodeur
   - Use encoder: Tick to use encoder. If unselected, system should be manually positioned on track #1 when starting. Turntable angle will be computed instead of being read on encoder.

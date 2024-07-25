@@ -362,7 +362,7 @@ function setAngle(line) {
 function changed(object) {
 	showMessage("# Set changed "+object.id+" #", traceJava);
 	const req = new XMLHttpRequest();
-	if (object.id.substring(0,5) == "trace" || object.id.substring(0,6) == "enable") {
+	if (object.id.substring(0,5) == "trace" || object.id.substring(0,6) == "enable" || object.id.substring(0,3) == "led") {
 		req.open("GET", location.origin+'/changed/'+object.id+"/"+object.checked);		// .checked is send for checkboxes
 	} else {
 		req.open("GET", location.origin+'/changed/'+object.id+"/"+object.value);		// .value else

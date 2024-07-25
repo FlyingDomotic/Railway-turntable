@@ -1,3 +1,4 @@
+#define VERSION "24.7.12-1"
 /*
  *	   English: Railway turntable control
  *	   Français : Contrôle d'un pont tournant ferroviaire miniature
@@ -21,8 +22,8 @@
  *	Connections
  *		By default, the following pins are defined in preference.h file:
  *			D0 (enablePin) : Stepper enable signal
+ *			D2 (runPin) : Rotation in progress LED pin
  *			D3 (mp3Pin) : MP3 one-line pin
- *			D4 (runPin) : Rotation in progress LED pin
  *			D5 (rxPin) : RS485 RX pin
  *			D6 (txPin) : RS485 TX pin
  *			D7 (pulsePin) : Stepper pulse signal
@@ -31,8 +32,8 @@
  *	Connexions
  *		Par défaut, les pinoches suivantes sont définies dans le fichier preference.h :
  *			D0 (enablePin) : Signal enable du moteur
+ *			D2 (runPin) : Pinoche de la LED d'indication de rotation
  *			D3 (mp3Pin) : Pinoche du module MP3 DF-SV17A
- *			D4 (runPin) : Pinoche de la LED d'indication de rotation
  *			D5 (rxPin) : RX du module RS485
  *			D6 (txPin) : TX du module RS485
  *			D7 (pulsePin) : Signal pulse du moteur
@@ -278,6 +279,7 @@ bool readSettings(void) {
 	traceDebug = settings["traceDebug"].as<bool>();
 	traceCode = settings["traceCode"].as<bool>();
 	traceJava = settings["traceJava"].as<bool>();
+    ledOnWhenHigh = settings["ledOnWhenHigh"].as<bool>();
 	ssid = settings["ssid"].as<String>();
 	pwd = settings["pwd"].as<String>();
 	espName = settings["name"].as<String>();
