@@ -15,6 +15,7 @@ let img2 = 0;														// Center turntable image
 let traceJava = false;												// Trace this java code
 let messagesExtended = false;										// Is messages div extended?
 let enableCircles = false;											// Are track circles enabled ton user view?
+let eanbleDCC = false;                                              // Are DCC addresses used?
 
 // Display message on console and messages HTML element
 function showMessage(message, displayOnBrowser = true) {
@@ -47,7 +48,10 @@ function loadSettings(loadHtml) {
 						if (key.substring(0,1) == "a" && key.length <= 3) {
 							// Load angle
 							document.getElementById(key).value = roundOf(jsonData[key],2)+"°";
-						// For trace and enable elements (checkboxes)
+                        } else if (key.substring(0,1) == "d" && key.length <= 3) {
+                            // Load angle
+                            document.getElementById(key).value = roundOf(jsonData[key],1);
+                        // For trace and enable elements (checkboxes)
 						} else if (key.substring(0,5) == "trace" || key.substring(0,6) == "enable" || key.substring(0,3) == "led") {
 							document.getElementById(key).checked = (String(jsonData[key]).toLowerCase() == "true");
 						// For other elements
@@ -114,6 +118,13 @@ function loadSettings(loadHtml) {
 				if (key == "enableCircles") {
 					enableCircles = jsonData[key] == true;
 				}
+				if (key == "enableDCC") {
+					enableDCC = jsonData[key] == true;
+                    document.getElementById("thAddress").hidden = (enableDCC == false);
+                    for (let i = 1; i <= 36; i++) {
+                        document.getElementById("dcc"+i).hidden = (enableDCC == false);
+                    }
+                }
 			};
 			// Reload image with new values
 			turn(lastAngle);

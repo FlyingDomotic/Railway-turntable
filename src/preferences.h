@@ -1,6 +1,7 @@
 #include <arduino.h>					// Arduino
 
 uint8_t enablePin = D0;					// Pin where stepper enable signal is connected to
+uint8_t dccPin = D1;                    // Pin where DCC decoder is connected to
 uint8_t runPin = D2;					// Pin where rotation LED is connected to
 uint8_t mp3Pin = D3;					// Pin where MP3 module is connected to (oneline protocol)
 uint8_t rxPin = D5;						// Pin where RS485 RX signal is connected to
@@ -29,6 +30,7 @@ float radius = 47.0;					// Radius of track marks (and click proximity)
 uint8_t trackCount = 1;					// Count of tracks
 bool enableSound = false;				// Globally enable sound
 bool enableCircles = false;				// Enable tracks circles
+bool enableDCC = false;                 // Use DCC addresses
 uint16_t beforeSoundIndex = 0;			// Before move sound index
 float beforeSoundDuration = 0.0;		// Before move sound duration (seconds)
 uint8_t beforeSoundVolume = 20;			// Before sound volume (max 30)
@@ -39,6 +41,7 @@ float afterSoundDuration = 0.0;			// After move sound duration
 uint8_t afterSoundVolume = 20;			// After sound volume (max 30)
 #define POSITION_COUNT 36				// Maximum number of tracks
 float indexes[POSITION_COUNT+1];		// Angles of each index
+float addresses[POSITION_COUNT+1];		// DCC address of each index
 float inertiaFactorStarting = 5;		// Divide speed by this number when starting
 float inertiaAngleStarting = 6;			// Increase speed over this angle when starting
 float inertiaFactorStopping = 5;		// Divide speed up to this number when stopping

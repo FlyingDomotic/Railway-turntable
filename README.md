@@ -2,23 +2,23 @@
 
 [English version and French version in the same document]
 
-Controls a railway turntable with an ESP8266, a stepper, rotation sensor through a web interface (fully asynchronous)
+Controls a railway turntable with an ESP8266, a stepper, rotation sensor through a web interface and/or a DCC interface (fully asynchronous)
 
 [ Versions françaises et anglaises dans le même document]
 
-Contrôle un pont tournant ferroviaire au travers d'un ESP8266, avec un moteur pas à pas, un capteur de rotation, via une interface Web (complètement asynchrone)
+Contrôle un pont tournant ferroviaire au travers d'un ESP8266, avec un moteur pas à pas, un capteur de rotation, via une interface Web et/ou une interface DCC (complètement asynchrone)
 
 ## What's for?/A quoi ça sert ?
 
 This code has been written to help a FabLab's member to implement a railway turntable for its HO scale railway, just clicking on an image of turntable. It's build around an ESP8266, a simple RS485/TTL interface connected to an ACCNT QY3806-485RTU rotary encoder, a NMEA 29 stepper with a DM556 driver, a MP3 sound module to complete the feeling and power supply to feed them all.
 
-On command side, idea was to have an image or turntable, and just click on track where we want to rotate turntable. Of course, commands may also be sent to embedded web server to get turntable state and position, as well as changing them. As soon as railway structure will be completely defined, DCC support will be added.
+On command side, idea was to have an image or turntable, and just click on track where we want to rotate turntable. Of course, commands may also be sent to embedded web server to get turntable state and position, as well as changing them. Turntable can also be connected with a DCC interface to receive rotation orders.
 
 Code can support up to 36 different tracks. All settings are done through a graphical interface with feedback. They're saved into a JSON file that can be either backup and/or manually edited, if needed. This includes stepper, encoder and MP3 module characteristics, values and offsets, RPM, inertia, sound played during the different phases... Extended list can be found latter on in this document.
 
 Ce code a été élaboré à la demande d'un membre du FabLab, qui souhaitait commander un pont tournant sur un circuit ferroviaire à l'échelle HO, en cliquant sur une image du pont. Il est construit autour d'un ESP8266, d'une interface RS485 de base connectée à un capteur de rotation MODBUS QY3806-485RTU de chez ACCNT, d'un moteur pas à pas NMEA 29 avec un driver DM556, et des alimentations nécessaires pour tout ça.
 
-Côté commande, l'idée est d'avoir une image du pont et de cliquer sur la voie vers laquelle on souhaite orienter le pont. Évidement, des commandes peuvent être envoyés au serveur web embarqué pour récupérer son état et sa position, mais aussi pour les modifier. Dès que la structure du réseau sera complètement définie, le support d'une interface DCC sera également ajouté.
+Côté commande, l'idée est d'avoir une image du pont et de cliquer sur la voie vers laquelle on souhaite orienter le pont. Évidement, des commandes peuvent être envoyés au serveur web embarqué pour récupérer son état et sa position, mais aussi pour les modifier. Le pont tournant peut également être commandé par une interface DCC, si besoin.
 
 Le code support jusqu'à 36 voies. L'ensemble du paramétrage est réalisé au travers d'une interface graphique interactive. Il est sauvegardé dans un fichier JSON qui peut être sauvegardé et/ou modifié manuellement, si besoin. Ceci concerne les caractéristiques, valeurs et décalages du moteur pas à pas, de l'encodeur et du module MP3, la vitesse de rotation, l'inertie et les sons associés aux différentes phases de la rotation. La liste complète figure plus bas.
 
@@ -52,11 +52,15 @@ An optional optocoupler is also available to connect a LED to signal turntable r
 
 An optional MP3 reader, based on a DY-SV17A module. It will allow to play a start sound during a settable time, a rotation sound, as long as turntable turns, and a stop sound during a settable time (all optional).
 
+An optional DCC decoder, based on an optocoupler can be added to decode DCC data and intercept rotation request on some specified addresses.
+
 To make turntable more realistic, inertia is simulated when starting rotation and/or another when stoppoing it.
 
 La connexion entre l'ESP et le capteur de rotation est réalisée par un module RS485/TTL simple. Une petite interface à base d'optocoupleurs 4N25, avec une résistance de limitation côté LED, a été réalisée pour connecter le DM556 alimenté en 24V, alors que l'ESP est en 3,3V.
 
 Un optocoupleur est également disponible pour connecter une LED de rotation (optionnel). Il peut commander/être remplacé par un relai si le courant à commuter est important.
+
+Un decodeur DCC optionnel, basé sur un optocoupleur, peut être ajouté pour décoder les messages DCC et intercepter les demandes de rotation sur certaines adresses.
 
 Un lecteur MP3, basé sur un module DY-SV17A peut également être ajouté (optionnel). Il permet de jouer un son de démarrage pendant une durée paramétrable, un son de rotation tant que le pont tourne, et un son d'arrêt pendant une durée paramétrable (tous optionnels).
 
@@ -91,6 +95,7 @@ git clone https://github.com/FlyingDomotic/Railway-turntable railwayTurntable
    - RS485 TX signal is connected to D6
    - Optional rotation LED optocoupler (or relay) is connected to D2
    - Optional MP3 module (one line) is connected on D3
+   - Optional DCC decoder is connected on D1
 3. Compile and load code into ESP.
 4. Load data folder into ESP flash.
 5. Start ESP and connect to Wifi SSID "PontTournant_XXXXXX" (where XXXXXX represent ESP chip ID)
@@ -112,7 +117,8 @@ git clone https://github.com/FlyingDomotic/Railway-turntable railwayTurntable
    - Le signal RX du module RS485 à D5
    - Le signal TX du module RS485 à D6
    - Le module MP3 optionnel à D3
-   - l'optocoupleur (ou le relais) de la LED de rotation optionnelle à D2.
+   - Le module DCC optionnel à D1
+   - L'optocoupleur (ou le relais) de la LED de rotation optionnelle à D2.
 3. Compiler et charger le code dans l'ESP.
 4. Charger le contenu du répertoire "data" dans la flash de l'ESP.
 5. Démarrer l'ESP et se connecter au SSID Wifi SSID "PontTournant_XXXXXX" (où XXXXXX représente l'ID du chip ESP)
@@ -124,7 +130,7 @@ Si besoin, vous pouvez vous connecter sur le lien série/USB de l'ESP pour voir 
 
 A schema of possible implementation can be found in schema.jpg. In this implementation, LED is replaced by a blinking module powered by 20V AC, so optocoupler is replaced by a relay.
 
-Un schéma d'une implementation possible est disponible dans le fichier schema.jpg. Dans celle-ci, la LED est remplacée par un module clignotant alimenté en 20V alternatif, l'optocoupleur est donc remplacé par un relais.
+Un schéma d'une implémentation possible est disponible dans le fichier schema.jpg. Dans celle-ci, la LED est remplacée par un module clignotant alimenté en 20V alternatif, l'optocoupleur est donc remplacé par un relais.
 
 ## Settings/Paramètres
 

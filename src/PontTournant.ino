@@ -1,4 +1,4 @@
-#define VERSION "24.7.12-1"
+#define VERSION "24.10.7-1"
 /*
  *	   English: Railway turntable control
  *	   Français : Contrôle d'un pont tournant ferroviaire miniature
@@ -10,6 +10,7 @@
  *		Serial/RS485 adapter
  *		DF-SV17A MP3 player (optional)
  *		Rotation LED (optional)
+ *      DCC decoder (optional)
  *
  *	Matériel
  *		ESP8266
@@ -18,10 +19,12 @@
  *		Adaptateur série/RS485
  *		Lecteur MP3 DF-SV17A (optionnel)
  *		LED de rotation (optionnel)
+ *      Décodeur DCC (optionnel)
  *
  *	Connections
  *		By default, the following pins are defined in preference.h file:
  *			D0 (enablePin) : Stepper enable signal
+ *          D1 (dccPin) : DCC decoder pin
  *			D2 (runPin) : Rotation in progress LED pin
  *			D3 (mp3Pin) : MP3 one-line pin
  *			D5 (rxPin) : RS485 RX pin
@@ -32,6 +35,7 @@
  *	Connexions
  *		Par défaut, les pinoches suivantes sont définies dans le fichier preference.h :
  *			D0 (enablePin) : Signal enable du moteur
+ *          D1 (dccPin) : Pinoche du décodeur DCC
  *			D2 (runPin) : Pinoche de la LED d'indication de rotation
  *			D3 (mp3Pin) : Pinoche du module MP3 DF-SV17A
  *			D5 (rxPin) : RX du module RS485
@@ -59,7 +63,7 @@
  *		/tstsnd/<x>	Testele son <x>, 1=avant rotation, 2=pendant rotation and 3=après rotation
  *		/debug		Affiche les variables internes pour déverminer
  *
- *	V2.1.5 FF - Juillet 2024 - For Fablab/Pour le FabLab
+ *	Flying Domotic - Juillet 2024 - For Fablab/Pour le FabLab
  *
  *	GNU GENERAL PUBLIC LICENSE - Version 3, 29 June 2007
  *
@@ -77,6 +81,7 @@
 #include <LittleFS.h>												// Flash dile system
 #include <littleFsEditor.h>											// LittleFS file system editor
 #include <ArduinoJson.h>											// JSON documents
+#include <NmraDcc.h>                                                // DCC message decoder
 
 //	---- Variables ----
 
@@ -127,7 +132,7 @@ const char stepperStateText4[] PROGMEM = "Fixing";
 const char stepperStateText5[] PROGMEM = "TestingSound";
 const char *const stepperStateTable[] PROGMEM = {stepperStateText0, stepperStateText1, stepperStateText2, stepperStateText3, stepperStateText4, stepperStateText5};
 
-//	Encodeur
+//	Encoder
 RotationSensor encoder(rxPin, txPin, traceDebug);		// Encoder class
 uint16_t resultValue;									// Encoder last result
 unsigned long resultValueTime = 0;						// Encoder last result time
@@ -135,10 +140,13 @@ bool encoderReading = false;							// Is encoder reading?
 unsigned long encoderReadTime = 0;						// Save encoder read time
 Modbus::ResultCode encoderLastReadError;				// Last error returned by encoder
 
-// Lecteur MP3
+// MP3 reader
 Mp3PlayerModuleWire mp3Player(mp3Pin);					// MP3 module one-line protocol
 unsigned long playerStartedTime = 0;					// Last play time
 unsigned long playerDuration = 0;						// Play duration time
+
+// DCC decoder
+NmraDcc dccInterface;                                   // DCC interface class
 
 //	---- Print rountines ----
 
@@ -201,6 +209,7 @@ void dumpSettings(void) {
 	printInfo("afterSoundIndex = %d\n", afterSoundIndex);
 	printInfo("afterSoundDuration = %.2f\n", afterSoundDuration);
 	printInfo("afterSoundVolume = %d\n", afterSoundVolume);
+	printInfo("enableDCC = %s\n", enableDCC ? "true" : "false");
 	printInfo("trackCount = %d\n", trackCount);
 	printInfo("traceDebug = %s\n", traceDebug ? "true" : "false");
 	printInfo("traceCode = %s\n", traceCode ? "true" : "false");
@@ -209,7 +218,13 @@ void dumpSettings(void) {
 	// Dump all defined angles
 	for (uint8_t i = 1; i <= POSITION_COUNT; i++) {
 		if (indexes[i] != -1) {
-			printInfo("a%d=%.2f ", i, indexes[i]);
+			printInfo("a%d=%.2f", i, indexes[i]);
+            // Print DCC addresses if enabled
+            if (enableDCC) {
+                   printInfo("/%.1f ", addresses[i]);
+            } else {
+                printInfo(" ");
+            }
 		}
 	}
 	printInfo("\n");
@@ -285,6 +300,7 @@ bool readSettings(void) {
 	espName = settings["name"].as<String>();
 	enableSound = settings["enableSound"].as<bool>();
 	enableCircles = settings["enableCircles"].as<bool>();
+	enableDCC = settings["enableDCC"].as<bool>();
 	beforeSoundIndex = settings["beforeSoundIndex"].as<uint16_t>();
 	beforeSoundDuration = settings["beforeSoundDuration"].as<float>();
 	beforeSoundVolume = settings["beforeSoundVolume"].as<uint8_t>();
@@ -294,11 +310,13 @@ bool readSettings(void) {
 	afterSoundDuration = settings["afterSoundDuration"].as<float>();
     afterSoundVolume = settings["afterSoundVolume"].as<uint8_t>();
 
-	// Read "axx" variables into a table
+	// Read "axx" and "dxx" variables into a table
 	char name[10];
 	for (uint8_t i = 1; i <= POSITION_COUNT; i++) {
 		snprintf(name, sizeof(name), "a%d", i);
 		indexes[i] = settings[name].as<float>();
+		snprintf(name, sizeof(name), "d%d", i);
+		addresses[i] = settings[name].as<float>();
 	}
 	// Dump settings on screen
 	dumpSettings();
@@ -337,6 +355,7 @@ void writeSettings(void) {
 	settings["slaveId"] = slaveId;
 	settings["regId"] = regId;
 	settings["radius"] = radius;
+	settings["enableDCC"] = enableDCC;
 	settings["enableSound"] = enableSound;
 	settings["beforeSoundIndex"] = beforeSoundIndex;
 	settings["beforeSoundDuration"] = beforeSoundDuration;
@@ -350,10 +369,12 @@ void writeSettings(void) {
 	settings["traceCode"] = traceCode;
 	settings["traceJava"] = traceJava;
 	settings["trackCount"] = trackCount;
-	// Load all "axx" variables
+	// Load all "axx" and "dxx" variables
 	for (uint8_t i = 1; i <= POSITION_COUNT; i++) {
 		snprintf(name, sizeof(name), "a%d", i);
 		settings[name] = indexes[i];
+		snprintf(name, sizeof(name), "d%d", i);
+		settings[name] = addresses[i];
 	}
 
 	File settingsFile = LittleFS.open(SETTINGS_FILE, "w");			// Open settings file
@@ -546,6 +567,32 @@ void playStop() {
 		*/
 		mp3Player.stop();
 	}
+}
+
+//  ---- DCC routines ----
+
+// This function is called whenever a normal DCC Turnout Packet is received and we're in Board Addressing Mode
+void notifyDccAccTurnoutBoard( uint16_t boardAddr, uint8_t outputPair, uint8_t direction, uint8_t outputPower) {
+    printInfo("notifyDccAccTurnoutBoard boardAddr=%d, outputPair=%d, direction=%d, outputPower=%x\n", boardAddr, outputPair, direction, outputPower);
+    // Define received address
+    uint16_t address = (boardAddr * 10) + (outputPair * 5);
+    printInfo("DCC address %d received\n", address);
+    // Scan all DCC addresses
+    for (uint8_t track=0; track < 36; track++) {
+        // Convert float DCC address to integer
+        uint16_t dccAddress = addresses[track] * 10;
+        printInfo("Index %d=%d", track, dccAddress);
+        if (dccAddress == address) {
+            // Increase track number, as table is zero based and tracks starts at one
+            track++;
+            printInfo("Turning to track #%d\n", track);
+            // Verify range of track number to amazing side effects
+            if (track > 0 && track <= trackCount)  {
+                // Move to given track
+                moveToTrack(track);
+            }
+        }
+    }
 }
 
 //	---- Web server routines ----
@@ -751,7 +798,7 @@ void setAngleReceived(AsyncWebServerRequest *request) {
 		// Extract track number
 		int8_t track = position.substring(separator1+1).toInt();
 		if (track == 1) {											// Special case of first track
-			indexes[1] = 0.0;										// Angle is zerp
+			indexes[1] = 0.0;										// Angle is zero
 			encoderOffsetAngle = encoder.floatModuloPositive(
 					encoderOffsetAngle + currentAngle, 360.0);		// Set encoder offset
 			writeSettings();
@@ -917,6 +964,8 @@ void setChangedReceived(AsyncWebServerRequest *request) {
 				enableEncoder = (fieldValue == "true");
 			} else if (fieldName == "adjustPosition") {
 				adjustPosition = (fieldValue == "true");
+			} else if (fieldName == "enableDCC") {
+				enableDCC = (fieldValue == "true");
 			} else if (fieldName == "enableSound") {
 				enableSound = (fieldValue == "true");
 			} else if (fieldName == "beforeSoundIndex") {
@@ -935,7 +984,11 @@ void setChangedReceived(AsyncWebServerRequest *request) {
 				afterSoundDuration = fieldValue.toFloat();
 			} else if (fieldName == "afterSoundVolume") {
 				afterSoundVolume = fieldValue.toInt();
-			} else {
+            } else if (fieldName.startsWith("d") and fieldName.length() <= 3) {
+                // This is a "dxx" field, extract index and set value
+                unsigned fieldIndex = fieldName.substring(2).toInt();
+                addresses[fieldIndex] = fieldValue.toFloat();
+            } else {
 				// This is not a known field
 				printError("Can't set field %s\n", fieldName.c_str());
 				char msg[70];											// Buffer for message
@@ -1109,6 +1162,9 @@ void setup() {
 
 	encoder.setCallback(modbusCb);									// Modbus end request callback
 	encoder.begin();												// Encoder init
+
+    dccInterface.pin(dccPin, 0);                                    // DCC decoder pin
+    dccInterface.init(MAN_ID_DIY, 10, CV29_ACCESSORY_DECODER, 0);   // Map accessory decoder
 }
 
 // ---- Permanent loop ----
@@ -1198,6 +1254,10 @@ void loop() {
 		}
 		resultValueTime = millis();										// Save time of last result
 	}
+
+    if (enableDCC) {                                                    // If DCC is enabled
+        dccInterface.process();                                         // Run DCC loop
+    }
 
 	ArduinoOTA.handle();												// Give hand to OTA
 }
