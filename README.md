@@ -52,7 +52,7 @@ An optional optocoupler is also available to connect a LED to signal turntable r
 
 An optional MP3 reader, based on a DY-SV17A module. It will allow to play a start sound during a settable time, a rotation sound, as long as turntable turns, and a stop sound during a settable time (all optional).
 
-An optional DCC decoder, based on an optocoupler can be added to decode DCC data and intercept rotation request on some specified addresses.
+An optional DCC decoder, based on an optocoupler and an Arduino Nano can be added to decode DCC data and intercept rotation request on some specified addresses.
 
 To make turntable more realistic, inertia is simulated when starting rotation and/or another when stoppoing it.
 
@@ -60,7 +60,7 @@ La connexion entre l'ESP et le capteur de rotation est réalisée par un module 
 
 Un optocoupleur est également disponible pour connecter une LED de rotation (optionnel). Il peut commander/être remplacé par un relai si le courant à commuter est important.
 
-Un decodeur DCC optionnel, basé sur un optocoupleur, peut être ajouté pour décoder les messages DCC et intercepter les demandes de rotation sur certaines adresses.
+Un décodeur DCC optionnel, basé sur un optocoupleur et un Arduino Nano, peut être ajouté pour décoder les messages DCC et intercepter les demandes de rotation sur certaines adresses.
 
 Un lecteur MP3, basé sur un module DY-SV17A peut également être ajouté (optionnel). Il permet de jouer un son de démarrage pendant une durée paramétrable, un son de rotation tant que le pont tourne, et un son d'arrêt pendant une durée paramétrable (tous optionnels).
 
@@ -95,7 +95,7 @@ git clone https://github.com/FlyingDomotic/Railway-turntable railwayTurntable
    - RS485 TX signal is connected to D6
    - Optional rotation LED optocoupler (or relay) is connected to D2
    - Optional MP3 module (one line) is connected on D3
-   - Optional DCC decoder is connected on D1
+   - Optional DCC decoder is connected on RX
 3. Compile and load code into ESP.
 4. Load data folder into ESP flash.
 5. Start ESP and connect to Wifi SSID "PontTournant_XXXXXX" (where XXXXXX represent ESP chip ID)
@@ -117,7 +117,7 @@ git clone https://github.com/FlyingDomotic/Railway-turntable railwayTurntable
    - Le signal RX du module RS485 à D5
    - Le signal TX du module RS485 à D6
    - Le module MP3 optionnel à D3
-   - Le module DCC optionnel à D1
+   - Le module DCC optionnel à RX
    - L'optocoupleur (ou le relais) de la LED de rotation optionnelle à D2.
 3. Compiler et charger le code dans l'ESP.
 4. Charger le contenu du répertoire "data" dans la flash de l'ESP.

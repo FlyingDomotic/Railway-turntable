@@ -1,4 +1,4 @@
-#define VERSION "24.10.7-1"
+#define VERSION "24.10.23-1"
 /*
  *	   English: Railway turntable control
  *	   Français : Contrôle d'un pont tournant ferroviaire miniature
@@ -23,19 +23,19 @@
  *
  *	Connections
  *		By default, the following pins are defined in preference.h file:
- *			D0 (enablePin) : Stepper enable signal
- *          D1 (dccPin) : DCC decoder pin
- *			D2 (runPin) : Rotation in progress LED pin
- *			D3 (mp3Pin) : MP3 one-line pin
- *			D5 (rxPin) : RS485 RX pin
- *			D6 (txPin) : RS485 TX pin
- *			D7 (pulsePin) : Stepper pulse signal
- * 			D8 (directionPin) : Stepper direction signal
+ *          RX (Serial): DCC decoder TX pin
+ *			D0 (enablePin): Stepper enable signal
+ *			D2 (runPin): Rotation in progress LED pin
+ *			D3 (mp3Pin): MP3 one-line pin
+ *			D5 (rxPin): RS485 RX pin
+ *			D6 (txPin): RS485 TX pin
+ *			D7 (pulsePin): Stepper pulse signal
+ * 			D8 (directionPin): Stepper direction signal
  *
  *	Connexions
  *		Par défaut, les pinoches suivantes sont définies dans le fichier preference.h :
+ *          RX (Serial): Pinoche TX du decoder DCC
  *			D0 (enablePin) : Signal enable du moteur
- *          D1 (dccPin) : Pinoche du décodeur DCC
  *			D2 (runPin) : Pinoche de la LED d'indication de rotation
  *			D3 (mp3Pin) : Pinoche du module MP3 DF-SV17A
  *			D5 (rxPin) : RX du module RS485
@@ -81,7 +81,6 @@
 #include <LittleFS.h>												// Flash dile system
 #include <littleFsEditor.h>											// LittleFS file system editor
 #include <ArduinoJson.h>											// JSON documents
-#include <NmraDcc.h>                                                // DCC message decoder
 
 //	---- Variables ----
 
@@ -146,7 +145,9 @@ unsigned long playerStartedTime = 0;					// Last play time
 unsigned long playerDuration = 0;						// Play duration time
 
 // DCC decoder
-NmraDcc dccInterface;                                   // DCC interface class
+uint16_t lastDccAddress = 0;                            // Last DCC address received
+char dccBuffer[15];                                     // Buffer for DCC message xxxxx,xxx,xxx
+uint8_t dccBufferPtr = 0;                               // Pointer into DCC buffer
 
 //	---- Print rountines ----
 
@@ -571,27 +572,72 @@ void playStop() {
 
 //  ---- DCC routines ----
 
-// This function is called whenever a normal DCC Turnout Packet is received and we're in Board Addressing Mode
-void notifyDccAccTurnoutBoard( uint16_t boardAddr, uint8_t outputPair, uint8_t direction, uint8_t outputPower) {
-    printInfo("notifyDccAccTurnoutBoard boardAddr=%d, outputPair=%d, direction=%d, outputPower=%x\n", boardAddr, outputPair, direction, outputPower);
+void checkForDccMessage(void) {
+    // Are some characters from DCC controller available?
+    if (Serial.available()) {
+        // Read all available characters
+		while (Serial.available()) {
+			// Read one char
+            char c = Serial.read();
+			// Is this end of line?
+			if (c == 10 or c == 13) {
+                if (dccBufferPtr) {
+                    unsigned int addr = 0;
+                    unsigned int direction = 0;
+                    unsigned int outputPower = 0;
+                    int result = sscanf(dccBuffer, "%u %u %u", &addr, &direction, &outputPower);
+                    if (result == 3) {
+                        notifyDccAccTurnoutOutput(addr, direction, outputPower);
+                        // Clear DCC buffer
+                        dccBufferPtr = 0;
+                        memset(dccBuffer, 0 ,sizeof(dccBuffer));
+                    } else {
+                        printError("Can't decode >%s< as DCC message\n", dccBuffer);
+                        // Clear DCC buffer
+                        dccBufferPtr = 0;
+                        memset(dccBuffer, 0 ,sizeof(dccBuffer));
+                    }
+                }
+            // Else store character, skipping NULL
+			} else if (c) {
+                // Is some room in dccBuffer?
+                if (dccBufferPtr < sizeof(dccBuffer)) {
+                    dccBuffer[dccBufferPtr++] = c;      // Copy received character
+                    dccBuffer[dccBufferPtr] = 0;        // Add a trailing zero
+				} else {
+                    // Buffer is full, reset it
+                    printError("DCC buffer overflow, ignoring %s\n", dccBuffer);
+                    dccBufferPtr = 0;
+                    memset(dccBuffer, 0 ,sizeof(dccBuffer));
+                }
+            }
+        }
+    }
+}
+
+// This function is called whenever a normal DCC Turnout Packet is received
+void notifyDccAccTurnoutOutput(unsigned int addr, unsigned int direction, unsigned int outputPower) {
+    //printInfo("DccAccTurnoutBoard addr=%d, direction=%d, outputPower=%x\n", addr, direction, outputPower);
     // Define received address
-    uint16_t address = (boardAddr * 10) + (outputPair * 5);
-    printInfo("DCC address %d received\n", address);
+    uint16_t address = (addr * 10) + (direction * 5);
+    if (address != lastDccAddress) {
+        // Save last DCC address as multiple messages will be received, and remaining to be ignored
+        lastDccAddress = address;
+        printInfo("DCC address %.1f received\n", float(address) / 10.0);
     // Scan all DCC addresses
-    for (uint8_t track=0; track < 36; track++) {
+        for (uint8_t track=1; track <= POSITION_COUNT; track++) {
         // Convert float DCC address to integer
         uint16_t dccAddress = addresses[track] * 10;
-        printInfo("Index %d=%d", track, dccAddress);
+            //printInfo("Index %d=%d\n", track, dccAddress);
         if (dccAddress == address) {
-            // Increase track number, as table is zero based and tracks starts at one
-            track++;
             printInfo("Turning to track #%d\n", track);
             // Verify range of track number to amazing side effects
-            if (track > 0 && track <= trackCount)  {
+                if (track >0 && track <= trackCount)  {
                 // Move to given track
                 moveToTrack(track);
             }
         }
+    }
     }
 }
 
@@ -603,7 +649,7 @@ void setupReceived(AsyncWebServerRequest *request) {
 	request->send(response);										// Send setup.htm
 }
 
-// Called when /setttings is received
+// Called when /settings is received
 void settingsReceived(AsyncWebServerRequest *request) {
 	AsyncWebServerResponse *response = request->beginResponse(LittleFS, SETTINGS_FILE, "application/json");
 	request->send(response);										// Send settings.json
@@ -1163,8 +1209,8 @@ void setup() {
 	encoder.setCallback(modbusCb);									// Modbus end request callback
 	encoder.begin();												// Encoder init
 
-    dccInterface.pin(dccPin, 0);                                    // DCC decoder pin
-    dccInterface.init(MAN_ID_DIY, 10, CV29_ACCESSORY_DECODER, 0);   // Map accessory decoder
+    // Dcc setup
+    memset(dccBuffer, 0, sizeof(dccBuffer));                        // Clear DCC buffer
 }
 
 // ---- Permanent loop ----
@@ -1256,7 +1302,7 @@ void loop() {
 	}
 
     if (enableDCC) {                                                    // If DCC is enabled
-        dccInterface.process();                                         // Run DCC loop
+        checkForDccMessage();
     }
 
 	ArduinoOTA.handle();												// Give hand to OTA
