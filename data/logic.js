@@ -51,6 +51,9 @@ function loadSettings(loadHtml) {
                         } else if (key.substring(0,1) == "d" && key.length <= 3) {
                             // Load angle
                             document.getElementById(key).value = roundOf(jsonData[key],1);
+                        } else if (key.substring(0,1) == "r" && key.length <= 3) {
+                            // Load angle
+                            document.getElementById(key).value = roundOf(jsonData[key],1);
                         // For trace and enable elements (checkboxes)
 						} else if (key.substring(0,5) == "trace" || key.substring(0,6) == "enable" || key.substring(0,3) == "led") {
 							document.getElementById(key).checked = (String(jsonData[key]).toLowerCase() == "true");
@@ -123,6 +126,13 @@ function loadSettings(loadHtml) {
                     document.getElementById("thAddress").hidden = (enableDCC == false);
                     for (let i = 1; i <= 36; i++) {
                         document.getElementById("dcc"+i).hidden = (enableDCC == false);
+                    }
+                }
+				if (key == "enableReversePosition") {
+					enableReversePosition = (jsonData[key] == true) && (enableDCC == true)
+                    document.getElementById("thReverse").hidden = (enableReversePosition == false);
+                    for (let i = 1; i <= 36; i++) {
+                        document.getElementById("dccr"+i).hidden = (enableReversePosition == false);
                     }
                 }
 			};

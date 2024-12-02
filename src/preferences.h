@@ -30,6 +30,7 @@ uint8_t trackCount = 1;					// Count of tracks
 bool enableSound = false;				// Globally enable sound
 bool enableCircles = false;				// Enable tracks circles
 bool enableDCC = false;                 // Use DCC addresses
+bool enableReversePosition = true;      // Allow rotation to reverse (+ 180°) position
 uint16_t beforeSoundIndex = 0;			// Before move sound index
 float beforeSoundDuration = 0.0;		// Before move sound duration (seconds)
 uint8_t beforeSoundVolume = 20;			// Before sound volume (max 30)
@@ -41,6 +42,7 @@ uint8_t afterSoundVolume = 20;			// After sound volume (max 30)
 #define POSITION_COUNT 36				// Maximum number of tracks
 float indexes[POSITION_COUNT+1];		// Angles of each index
 float addresses[POSITION_COUNT+1];		// DCC address of each index
+float reverses[POSITION_COUNT+1];		// DCC reverse address of each index
 float inertiaFactorStarting = 5;		// Divide speed by this number when starting
 float inertiaAngleStarting = 6;			// Increase speed over this angle when starting
 float inertiaFactorStopping = 5;		// Divide speed up to this number when stopping

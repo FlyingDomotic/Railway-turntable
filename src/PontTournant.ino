@@ -1,4 +1,4 @@
-#define VERSION "24.10.23-1"
+#define VERSION "24.11.26-1"
 /*
  *	   English: Railway turntable control
  *	   Français : Contrôle d'un pont tournant ferroviaire miniature
@@ -46,7 +46,7 @@
  *	Available URL
  *		/			Root page (displays turntable allowing clicking on tracks)
  *		/status		Returns status in JSON format
- *		/goto/<nnn>	Rurns turntable in front of track <nnn>
+ *		/goto/<nnn>	Rurns turntable in front of track <nnn> (can be negative to flip direction)
  *		/setup		Display setup page
  *		/edit		Manage and edit flie system
  *		/settings	Returns settings in JSON format
@@ -56,7 +56,7 @@
  * 	URL disponibles
  *		/			Page d'accueil (affiche le pont et permet de cliquer sur les voies)
  *		/status		Retourne l'état sous forme JSON
- *		/goto/<nnn>	Tourne le pont en face de la voie <nnn>
+ *		/goto/<nnn>	Tourne le pont en face de la voie <nnn> (négatif pour retourner la loco)
  *		/setup		Affiche la page de configuration
  *		/edit		Gère et édite le système de fichier
  *		/settings	Retourne la configuration au format JSON
@@ -211,6 +211,7 @@ void dumpSettings(void) {
 	printInfo("afterSoundDuration = %.2f\n", afterSoundDuration);
 	printInfo("afterSoundVolume = %d\n", afterSoundVolume);
 	printInfo("enableDCC = %s\n", enableDCC ? "true" : "false");
+    printInfo("enableReversePosition = %s\n", enableReversePosition ? "true" : "false");
 	printInfo("trackCount = %d\n", trackCount);
 	printInfo("traceDebug = %s\n", traceDebug ? "true" : "false");
 	printInfo("traceCode = %s\n", traceCode ? "true" : "false");
@@ -222,10 +223,12 @@ void dumpSettings(void) {
 			printInfo("a%d=%.2f", i, indexes[i]);
             // Print DCC addresses if enabled
             if (enableDCC) {
-                   printInfo("/%.1f ", addresses[i]);
-            } else {
-                printInfo(" ");
+                   printInfo("/%.1f", addresses[i]);
+                    if (enableReversePosition) {
+                        printInfo("/%.1f", reverses[i]);
+                    }
             }
+            printInfo(" ");
 		}
 	}
 	printInfo("\n");
@@ -302,6 +305,7 @@ bool readSettings(void) {
 	enableSound = settings["enableSound"].as<bool>();
 	enableCircles = settings["enableCircles"].as<bool>();
 	enableDCC = settings["enableDCC"].as<bool>();
+	enableReversePosition = settings["enableReversePosition"].as<bool>();
 	beforeSoundIndex = settings["beforeSoundIndex"].as<uint16_t>();
 	beforeSoundDuration = settings["beforeSoundDuration"].as<float>();
 	beforeSoundVolume = settings["beforeSoundVolume"].as<uint8_t>();
@@ -318,6 +322,8 @@ bool readSettings(void) {
 		indexes[i] = settings[name].as<float>();
 		snprintf(name, sizeof(name), "d%d", i);
 		addresses[i] = settings[name].as<float>();
+		snprintf(name, sizeof(name), "r%d", i);
+		reverses[i] = settings[name].as<float>();
 	}
 	// Dump settings on screen
 	dumpSettings();
@@ -357,6 +363,7 @@ void writeSettings(void) {
 	settings["regId"] = regId;
 	settings["radius"] = radius;
 	settings["enableDCC"] = enableDCC;
+	settings["enableReversePosition"] = enableReversePosition;
 	settings["enableSound"] = enableSound;
 	settings["beforeSoundIndex"] = beforeSoundIndex;
 	settings["beforeSoundDuration"] = beforeSoundDuration;
@@ -376,6 +383,8 @@ void writeSettings(void) {
 		settings[name] = indexes[i];
 		snprintf(name, sizeof(name), "d%d", i);
 		settings[name] = addresses[i];
+		snprintf(name, sizeof(name), "r%d", i);
+		settings[name] = reverses[i];
 	}
 
 	File settingsFile = LittleFS.open(SETTINGS_FILE, "w");			// Open settings file
@@ -469,8 +478,15 @@ void stopRotation(void) {
 
 // Move turntable to a given track
 void moveToTrack(uint8_t index) {
-	requiredAngle = indexes[index];									// User's required angle
-	float deltaAngle = requiredAngle - currentAngle;				// Difference to move
+    if (index < 0) {                                                // Is index negative?
+	    requiredAngle = indexes[-index] + 180.0;					// Opposite of user's required angle
+        if (requiredAngle >= 360.0) {                               // Make angle in range 0-360
+            requiredAngle -= 360.0;
+        }
+    } else {
+	    requiredAngle = indexes[index];								// User's required angle
+    }
+    float deltaAngle = requiredAngle - currentAngle;				// Difference to move
 	if (deltaAngle > 180.0) {										// Set angle into -180/+180 range
 		deltaAngle -= 360.0;
 	}
@@ -494,7 +510,7 @@ void fixPosition(void){
 			if (deltaAngle > 180.0) {								// Set angle into -180/+180 range
 				deltaAngle -= 360.0;
 			}
-			if (deltaAngle < -180.0) {
+			if (deltaAngle < -80.0) {
 				deltaAngle += 360.0;
 			}
 			microStepsToGo = stepper.microStepsForAngle(deltaAngle);// Compute micro steps to move
@@ -624,20 +640,36 @@ void notifyDccAccTurnoutOutput(unsigned int addr, unsigned int direction, unsign
         // Save last DCC address as multiple messages will be received, and remaining to be ignored
         lastDccAddress = address;
         printInfo("DCC address %.1f received\n", float(address) / 10.0);
-    // Scan all DCC addresses
+        // Scan all DCC addresses
         for (uint8_t track=1; track <= POSITION_COUNT; track++) {
-        // Convert float DCC address to integer
-        uint16_t dccAddress = addresses[track] * 10;
+            // Convert float DCC address to integer
+            uint16_t dccAddress = addresses[track] * 10;
             //printInfo("Index %d=%d\n", track, dccAddress);
-        if (dccAddress == address) {
-            printInfo("Turning to track #%d\n", track);
-            // Verify range of track number to amazing side effects
+            if (dccAddress == address) {
+                printInfo("Turning to track #%d\n", track);
+                // Verify range of track number to amazing side effects
                 if (track >0 && track <= trackCount)  {
-                // Move to given track
-                moveToTrack(track);
+                    // Move to given track
+                    moveToTrack(track);
+                    return;
+                }
             }
         }
-    }
+        // Scan all DCC reverse addresses
+        for (uint8_t track=1; track <= POSITION_COUNT; track++) {
+            // Convert float DCC reverse address to integer
+            uint16_t dccReverseAddress = reverses[track] * 10;
+            //printInfo("Index %d=%d\n", track, dccReverseAddress);
+            if (dccReverseAddress == address) {
+                printInfo("Turning reversed to track #%d\n", track);
+                // Verify range of track number to amazing side effects
+                if (track >0 && track <= trackCount)  {
+                    // Move to given track
+                    moveToTrack(-track);
+                    return;
+                }
+            }
+        }
     }
 }
 
@@ -816,15 +848,19 @@ void gotoReceived(AsyncWebServerRequest *request) {
 		// Extract track number to move to
 		int8_t track = position.substring(separator1+1).toInt();
 		// Check for track limits (as users can send this request)
-		if (track > 0 && track <= trackCount)  {
+		if ((track > 0 && track <= trackCount) || (enableReversePosition && (track < 0) && ( track >= -trackCount)))  {
 			moveToTrack(track);										// Move to given track
 			char msg[50];											// Buffer for message
 			snprintf(msg, sizeof(msg),"<status>Ok, going to track %d</status>", track);
 			request->send_P(200, "", msg);
 			return;
-		}
+        }
 		char msg[70];											// Buffer for message
-		snprintf(msg, sizeof(msg),"<status>Bad track number %d, should be 1-%d</status>", track, trackCount);
+        if (enableReversePosition) {
+		    snprintf(msg, sizeof(msg),"<status>Bad track number %d, should be (+/-) 1-%d</status>", track, trackCount);
+        } else {
+		    snprintf(msg, sizeof(msg),"<status>Bad track number %d, should be 1-%d</status>", track, trackCount);
+        }
 		request->send_P(400, "", msg);
 		return;
 	}
@@ -1012,6 +1048,8 @@ void setChangedReceived(AsyncWebServerRequest *request) {
 				adjustPosition = (fieldValue == "true");
 			} else if (fieldName == "enableDCC") {
 				enableDCC = (fieldValue == "true");
+			} else if (fieldName == "enableReversePosition") {
+				enableReversePosition = (fieldValue == "true");
 			} else if (fieldName == "enableSound") {
 				enableSound = (fieldValue == "true");
 			} else if (fieldName == "beforeSoundIndex") {
@@ -1034,6 +1072,10 @@ void setChangedReceived(AsyncWebServerRequest *request) {
                 // This is a "dxx" field, extract index and set value
                 unsigned fieldIndex = fieldName.substring(2).toInt();
                 addresses[fieldIndex] = fieldValue.toFloat();
+            } else if (fieldName.startsWith("r") and fieldName.length() <= 3) {
+                // This is a "rxx" field, extract index and set value
+                unsigned fieldIndex = fieldName.substring(2).toInt();
+                reverses[fieldIndex] = fieldValue.toFloat();
             } else {
 				// This is not a known field
 				printError("Can't set field %s\n", fieldName.c_str());
@@ -1208,7 +1250,7 @@ void setup() {
 
 	encoder.setCallback(modbusCb);									// Modbus end request callback
 	encoder.begin();												// Encoder init
-
+    
     // Dcc setup
     memset(dccBuffer, 0, sizeof(dccBuffer));                        // Clear DCC buffer
 }
@@ -1216,13 +1258,13 @@ void setup() {
 // ---- Permanent loop ----
 void loop() {
 	// Manage stepper rotation
-	StepperCommand::stepperPhases phase = stepper.stepperLoop();		// Run stepper loop
-	if (rotationState == stepperRunning) {								// Are we rotating?
-		if (phase == StepperCommand::phaseEnd) {						// At end of step?
-			currentAngle = encoder.floatModuloPositive(					// Make result in range 0-360
-				currentAngle + stepper.anglePerMicroStep()				// Update current angle
+	StepperCommand::stepperPhases phase = stepper.stepperLoop();	// Run stepper loop
+	if (rotationState == stepperRunning) {							// Are we rotating?
+		if (phase == StepperCommand::phaseEnd) {					// At end of step?
+			currentAngle = encoder.floatModuloPositive(				// Make result in range 0-360
+				currentAngle + stepper.anglePerMicroStep()			// Update current angle
 				, 360.0);
-			microStepsToGo--;											// Remove one micro step
+			microStepsToGo--;										// Remove one micro step
             if (microStepsToGo > inertiaEndStarting) {				// Are we in initial rotation?
                 currentStepDuration -= inertiaDurationDecrement;	// Decrement duration
             } else if (microStepsToGo <= inertiaStepsStopping) {	// Are we in slowing down rotation?
@@ -1230,80 +1272,80 @@ void loop() {
             } else {												// We are in full speed part
                 currentStepDuration = normalStepDuration;			// Set normal duration
             }
-			if (!microStepsToGo) {										// Do we end rotation?
-				stopRotation();											// Stop rotation
+			if (!microStepsToGo) {									// Do we end rotation?
+				stopRotation();										// Stop rotation
 			}
-		} else if (phase == StepperCommand::phaseIdle) {				// Are we idle?
-			stepper.turnOneMicroStep(currentStepDuration);				// Turn one micro step
+		} else if (phase == StepperCommand::phaseIdle) {			// Are we idle?
+			stepper.turnOneMicroStep(currentStepDuration);			// Turn one micro step
 		}
-	} else if (rotationState == stepperStarting) {						// Are we starting?
-		if ((millis() - playerStartedTime) > playerDuration) {			// Do we exhaust playing time?
-			if (moveSoundIndex) {										// Do we have a rotation sound?
-				playIndex(moveSoundIndex, moveSoundVolume);				// Play rotation sound
+	} else if (rotationState == stepperStarting) {					// Are we starting?
+		if ((millis() - playerStartedTime) > playerDuration) {		// Do we exhaust playing time?
+			if (moveSoundIndex) {									// Do we have a rotation sound?
+				playIndex(moveSoundIndex, moveSoundVolume);			// Play rotation sound
 			} else {
-				playStop();												// Stop starting sound
+				playStop();											// Stop starting sound
 			}
-			rotationState = stepperRunning;								// We're now running
-			rotationStartTime = millis();								// Set start rotation time
+			rotationState = stepperRunning;							// We're now running
+			rotationStartTime = millis();							// Set start rotation time
 		}
-	} else if (rotationState == stepperStopping) {						// Are we stopping?
-		if ((millis() - playerStartedTime) > playerDuration) {			// Do we exhaust playing time?
-			playStop();													// Stop stopping sound
-			rotationState = stepperStopped;								// Set state to stopped
-        	digitalWrite(runPin, ledOnWhenHigh ? LOW: HIGH);			// Set rotation pin to OFF
+	} else if (rotationState == stepperStopping) {					// Are we stopping?
+		if ((millis() - playerStartedTime) > playerDuration) {		// Do we exhaust playing time?
+			playStop();												// Stop stopping sound
+			rotationState = stepperStopped;							// Set state to stopped
+        	digitalWrite(runPin, ledOnWhenHigh ? LOW: HIGH);		// Set rotation pin to OFF
 		}
-	} else if (rotationState == stepperFixing) {						// Are we fixing?
-		if (phase == StepperCommand::phaseEnd) {						// At end of step?
-			currentAngle = encoder.floatModuloPositive(					// Make result in range 0-360
-				currentAngle + stepper.anglePerMicroStep()				// Update current angle
+	} else if (rotationState == stepperFixing) {					// Are we fixing?
+		if (phase == StepperCommand::phaseEnd) {					// At end of step?
+			currentAngle = encoder.floatModuloPositive(				// Make result in range 0-360
+				currentAngle + stepper.anglePerMicroStep()			// Update current angle
 				, 360.0);
-			microStepsToGo--;											// Remove one micro step
-			if (!microStepsToGo) {										// Do we end rotation?
-				rotationState = stepperStopped;							// Set state back to stoppeD
+			microStepsToGo--;										// Remove one micro step
+			if (!microStepsToGo) {									// Do we end rotation?
+				rotationState = stepperStopped;						// Set state back to stoppeD
 			}
-		} else if (phase == StepperCommand::phaseIdle) {				// Are we idle?
-			stepper.turnOneMicroStep(inertiaFinalStepDuration);			// Turn one micro step at slow speed
+		} else if (phase == StepperCommand::phaseIdle) {			// Are we idle?
+			stepper.turnOneMicroStep(inertiaFinalStepDuration);		// Turn one micro step at slow speed
 		}
-	} else if (rotationState == stepperStopped) {						// Are we stopped?
-		if (adjustPosition) {											// Is Position fixing enabled
-			fixPosition();												// Fix position
+	} else if (rotationState == stepperStopped) {					// Are we stopped?
+		if (adjustPosition) {										// Is Position fixing enabled
+			fixPosition();											// Fix position
 		}
-	} else if (rotationState == testingSound) {							// Are we testing sound?
-		if ((millis() - playerStartedTime) > playerDuration) {			// Do we exhaust playing time?
-			playStop();													// Stop playing sound
-			rotationState = stepperStopped;								// We're now stopped
+	} else if (rotationState == testingSound) {						// Are we testing sound?
+		if ((millis() - playerStartedTime) > playerDuration) {		// Do we exhaust playing time?
+			playStop();												// Stop playing sound
+			rotationState = stepperStopped;							// We're now stopped
 		}
 	}
 
 	// Manage encoder
 	if (enableEncoder) {
-		if (encoder.active()){											// Is encoder active?
-			encoder.loop();												// Give habd to encoder
+		if (encoder.active()){										// Is encoder active?
+			encoder.loop();											// Give habd to encoder
 		}
 	}
 	
-	if (enableEncoder) {												// Encoder enabled?
-		if ((millis() - encoderReadTime) > 1000) {						// Last reading more than a second?
-			encoderReading = true;										// Encoder reading
-			encoderReadTime = millis();									// Read start time
-			encoder.getAngle(&resultValue);								// Restart request
+	if (enableEncoder) {											// Encoder enabled?
+		if ((millis() - encoderReadTime) > 1000) {					// Last reading more than a second?
+			encoderReading = true;									// Encoder reading
+			encoderReadTime = millis();								// Read start time
+			encoder.getAngle(&resultValue);							// Restart request
 		}
 	}
 
-	if ((millis() - resultValueTime) > 1000) {							// Last result sent more than 1 s?
-		if (abs(currentAngle - lastAngleSent) >= MIN_DELTA_ANGLE) {		// Send message only if there's a slight difference
+	if ((millis() - resultValueTime) > 1000) {						// Last result sent more than 1 s?
+		if (abs(currentAngle - lastAngleSent) >= MIN_DELTA_ANGLE) {	// Send message only if there's a slight difference
 			// Sends an "angle" event to browser
-			char msg[10];												// Message buffer
-			snprintf_P(msg, sizeof(msg), PSTR("%.2f"), currentAngle);	// Convert angle to message
-			events.send(msg, "angle");									// Send an "angle" message
-			lastAngleSent = currentAngle;								// Save last angle sent
+			char msg[10];											// Message buffer
+			snprintf_P(msg, sizeof(msg), PSTR("%.2f"), currentAngle); // Convert angle to message
+			events.send(msg, "angle");								// Send an "angle" message
+			lastAngleSent = currentAngle;							// Save last angle sent
 		}
-		resultValueTime = millis();										// Save time of last result
+		resultValueTime = millis();									// Save time of last result
 	}
 
-    if (enableDCC) {                                                    // If DCC is enabled
+    if (enableDCC) {                                                // If DCC is enabled
         checkForDccMessage();
     }
 
-	ArduinoOTA.handle();												// Give hand to OTA
+	ArduinoOTA.handle();											// Give hand to OTA
 }

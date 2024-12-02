@@ -148,6 +148,8 @@ Un schéma d'une implémentation possible est disponible dans le fichier schema.
   - Angle before slowing down: angle, in degree, to decelerate from normal RPM to ending speed. Set to zero to ignore ending inertia.
   - Adjust position: permanently read turntable position and realign it with required angle when selected.
   - Light rotation LED on high signal: light rotation LED when signal is high. To be set to false when using D2 internal LED which is turned ON on low signal.
+  - Allow locomotive flipping: allow positionning the turntable at + 180° of track position to allow reversing (steam) locomotive direction
+
   - Degrés par pas : Indiquer le nombre de degrés correspondant à 1 pas. Par exemple, un moteur avec 200 pas par tour fera 200/360 = 1,8° par pas.
   - Micro-pas par pas : Indiquer le nombre de micro-pas par pas. Dépend des réglages du driver. Voir la doc du driver et reporter la valeur choisie sur le driver.
   - Réduction moteur : nombre de tours du moteur pour un tour du pont (1.0 s'il n'y a pas de réducteur, 3.0 si 3 pas du moteur sont nécessaires pour avoir un pas sur le pont).
@@ -160,6 +162,7 @@ Un schéma d'une implémentation possible est disponible dans le fichier schema.
   - Inverser le sens du moteur : cocher pour inverser le sens de rotation fu moteur ;-)
   - Ajuster la position : lit en permanence la position du pont et la réaligne avec l'angle demandé si coché.
   - Allumer la LED de rotation sur signal haut : allume la LED de rotation sur un signal haut. A décocher lorsqu'on utilise la LED interne sur D2 qui est active à l'état bas.
+  - Permettre le retournement des locomotives : autorise le retournement (position de la voie + 180°) des locomotives (à vapeur) sur le pont
 
 #### Define encoder parameters/Définir les paramètres de l'encodeur
   - Use encoder: Tick to use encoder. If unselected, system should be manually positioned on track #1 when starting. Turntable angle will be computed instead of being read on encoder.
@@ -255,12 +258,30 @@ Note: Les fichiers MP3 doivent être écrits dans le répertoire racine de la fl
 
   - La liste des voies va s'adapter en fonction de ce nombre.
 
+#### Tick (or not) DCC information Input track count into "Track count"/Saisir le nombre de voies dans la zone "Nombre de voies"
+  - List of tracks will be adapted giving this count.
+
+  - La liste des voies va s'adapter en fonction de ce nombre.
+
 #### Stall all tracks (except#1 already stalled/Caler toutes les voies (sauf la 1 déjà calée)
   - Stall turntable in front on desired track
   - Click on "<--" of desired track  to save position.
 
   - Caler l'entrée du pont  en face de la voie.
   - Cliquer sur le bouton "<--" de la voie correspondante pour la mémoriser.
+
+#### DCC parameters / Parametres DCC
+If using DCC, tick the corresponding box.
+Tick "Allow locomotive flipping" should you want to allow it.
+Then enter DCC address for corresponding track in "DCC" column, and reverse address in "DCC (R)" if flipping is enabled.
+To specify second accessory on a given address, input the address followed by ".5".
+For example, DCC address 200 accessory #1 is "200", while accessory #2 is "200.5".
+
+Pour utiliser DCC, cochez la boîte correspondante.
+Cocher "Permettre le retournement des locomotives" si vous le souhaitez.
+Donner ensuite les adresses DCC correspondant aux différentes voies dans la colonne "DCC", et les adresses des positions inverses dans "DCC (R)" si le retournement est autorisé.
+Pour spécifier le second accessoire d'une adresse donnée, entrer l'adresse et la faire suivre de ".5"
+Par exemple, l'adresse DCC 200, accessoire 1 doit être entré "200", l'accessoire 2 "200.5".
 
 ### Image used by Web interface setting/Image utilisée par l'interface Web
 We have now to setup web interface. Take a photo of turntable, in top view. Convert it in PNG format, adjust size to display it in one part in your browser, ensuring that center of turntable is exactly in center of image. Name it "imagePont.png". To limit image size, it could be a good idea to save it with 8 or 16 bits palette. Don't forget to set transparency if needed.
@@ -281,7 +302,7 @@ Copier les 2 fichier dans le répertoire data, et le charger dans la flash de l'
 
   - / : root page (displays turntable allowing clicking on tracks)/page d'accueil (affiche le pont et permet de cliquer sur les voies)
   - /status : returns status in JSON format/Retourne l'état sous forme JSON
-  - /goto/<nnn> : turns turntable in front of track <nnn>/tourne le pont en face de la voie <nnn>
+  - /goto/<nnn> : turns turntable in front of track <nnn> (negative values to flip direction)/tourne le pont en face de la voie <nnn> (valeur négative pour retourner la direction)
   - /setup : display setup page/affiche la page de configuration
   - /edit : manage and edit flie system/gère et édite le système de fichier
   - /settings : returns settings in JSON format/Retourne la configuration au format JSON
